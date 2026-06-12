@@ -32,11 +32,11 @@ function HealthCoach() {
 
   useEffect(() => {
     const sid = searchParams.get("session_id");
-    if (sid) {
+    if (sid && !sessionId) {
       setSessionId(sid);
       setTab("checkin");
     }
-  }, [searchParams]);
+  }, []);
 
   function updateUrl(sid) {
     router.replace(`/?session_id=${sid}`, { scroll: false });
