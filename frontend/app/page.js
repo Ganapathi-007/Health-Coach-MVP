@@ -21,11 +21,12 @@ function HealthCoach() {
 
   const [checkinDay, setCheckinDay] = useState(null);
   const [questions, setQuestions] = useState([]);
-  const [checkinPhase, setCheckinPhase] = useState("idle"); // idle | answering | done
+  const [checkinPhase, setCheckinPhase] = useState("idle"); // idle | chatting | done
+  const [messages, setMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
   const [currentQ, setCurrentQ] = useState(0);
-  const [answers, setAnswers] = useState(["", "", ""]);
-  const [currentAnswer, setCurrentAnswer] = useState("");
-  const [coaching, setCoaching] = useState("");
+  const [answers, setAnswers] = useState([]);
+  const chatEndRef = useState(null);
 
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
@@ -67,11 +68,10 @@ function HealthCoach() {
     if (!sessionId) return;
     setLoading(true);
     setError("");
-    setQuestions([]);
-    setAnswers(["", "", ""]);
-    setCurrentAnswer("");
+    setMessages([]);
+    setAnswers([]);
     setCurrentQ(0);
-    setCoaching("");
+    setChatInput("");
     setCheckinPhase("idle");
     try {
       const res = await fetch(`${API}/checkin`, {
@@ -82,41 +82,51 @@ function HealthCoach() {
       const data = await res.json();
       setCheckinDay(data.day);
       setQuestions(data.questions);
-      setCheckinPhase("answering");
+      setMessages([{ role: "coach", text: data.questions[0] }]);
+      setCurrentQ(0);
+      setCheckinPhase("chatting");
     } catch {
       setError("Could not reach the backend.");
     }
     setLoading(false);
   }
 
-  async function handleNextAnswer() {
-    if (!currentAnswer.trim()) return;
-    const updated = [...answers];
-    updated[currentQ] = currentAnswer;
-    setAnswers(updated);
-    setCurrentAnswer("");
+  async function handleSend() {
+    if (!chatInput.trim() || checkinPhase !== "chatting") return;
 
-    if (currentQ < questions.length - 1) {
-      setCurrentQ(currentQ + 1);
+    const userText = chatInput.trim();
+    setChatInput("");
+    const updatedAnswers = [...answers, userText];
+    setAnswers(updatedAnswers);
+    setMessages(prev => [...prev, { role: "user", text: userText }]);
+
+    const nextQ = currentQ + 1;
+
+    if (nextQ < questions.length) {
+      setCurrentQ(nextQ);
+      setTimeout(() => {
+        setMessages(prev => [...prev, { role: "coach", text: questions[nextQ] }]);
+      }, 400);
     } else {
-      // All answered — submit
       setLoading(true);
-      try {
-        const res = await fetch(`${API}/checkin/respond`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_id: sessionId, questions, responses: updated }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || "API error");
-        setCoaching(data.coaching);
-        setProfile(prev => prev ? { ...prev, current_day: data.new_day } : prev);
-        setCheckinPhase("done");
-      } catch (e) {
-        setError(`Could not get coach feedback: ${e.message}`);
-        setCheckinPhase("done");
-      }
-      setLoading(false);
+      setTimeout(async () => {
+        try {
+          const res = await fetch(`${API}/checkin/respond`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ session_id: sessionId, questions, responses: updatedAnswers }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || "API error");
+          setMessages(prev => [...prev, { role: "coach", text: data.coaching, feedback: true }]);
+          setProfile(prev => prev ? { ...prev, current_day: data.new_day } : prev);
+          setCheckinPhase("done");
+        } catch (e) {
+          setError(`Could not get coach feedback: ${e.message}`);
+          setCheckinPhase("done");
+        }
+        setLoading(false);
+      }, 400);
     }
   }
 
@@ -264,7 +274,7 @@ function HealthCoach() {
           <>
             <div className="page-header">
               <h2>Daily Check-in</h2>
-              <p>Answer 3 quick questions — your coach will respond after.</p>
+              <p>Chat with your coach — questions adapt to your progress.</p>
             </div>
             <div className="card">
               {checkinPhase === "idle" && (
@@ -273,56 +283,62 @@ function HealthCoach() {
                 </button>
               )}
 
-              {checkinPhase === "answering" && questions.length > 0 && (
-                <>
-                  <div className="day-badge">Day {checkinDay} — Question {currentQ + 1} of {questions.length}</div>
-                  <div className="question-item" style={{ marginBottom: 20 }}>
-                    <div className="q-number">{currentQ + 1}</div>
-                    <span>{questions[currentQ]}</span>
-                  </div>
-                  <textarea
-                    placeholder="Type your answer here…"
-                    value={currentAnswer}
-                    onChange={(e) => setCurrentAnswer(e.target.value)}
-                    style={{ minHeight: 90 }}
-                    autoFocus
-                  />
-                  <button
-                    className="btn-primary"
-                    onClick={handleNextAnswer}
-                    disabled={loading || !currentAnswer.trim()}
-                  >
-                    {loading ? "Submitting…" : currentQ < questions.length - 1 ? "Next →" : "Done — get feedback →"}
-                  </button>
-                </>
-              )}
-
-              {checkinPhase === "done" && (
-                <>
-                  <div className="day-badge">Day {checkinDay} — Complete</div>
-                  <div style={{ marginBottom: 20 }}>
-                    {questions.map((q, i) => (
-                      <div key={i} style={{ marginBottom: 12 }}>
-                        <div className="question-item">
-                          <div className="q-number">{i + 1}</div>
-                          <span>{q}</span>
-                        </div>
-                        <div style={{ paddingLeft: 16, marginTop: 6, fontSize: 14, color: "#555", fontStyle: "italic" }}>
-                          {answers[i]}
+              {(checkinPhase === "chatting" || checkinPhase === "done") && (
+                <div className="chat-wrapper">
+                  {checkinDay && (
+                    <div className="chat-day-badge">
+                      <span className="day-badge">Day {checkinDay}</span>
+                    </div>
+                  )}
+                  <div className="chat-window">
+                    {messages.map((msg, i) => (
+                      <div key={i} className={`chat-bubble-row ${msg.role}`}>
+                        {msg.role === "coach" && (
+                          <div className="chat-avatar">🌿</div>
+                        )}
+                        <div className={`chat-bubble ${msg.role} ${msg.feedback ? "feedback" : ""}`}>
+                          {msg.feedback
+                            ? <ReactMarkdown>{msg.text}</ReactMarkdown>
+                            : msg.text}
                         </div>
                       </div>
                     ))}
+                    {loading && (
+                      <div className="chat-bubble-row coach">
+                        <div className="chat-avatar">🌿</div>
+                        <div className="chat-bubble coach" style={{ color: "#aaa", fontStyle: "italic" }}>
+                          Thinking…
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  {coaching && (
-                    <div className="answer-box">
-                      <div style={{ fontSize: 12, fontWeight: 600, color: "#4a7c59", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Coach's response</div>
-                      <ReactMarkdown>{coaching}</ReactMarkdown>
+
+                  {checkinPhase === "chatting" && (
+                    <div className="chat-input-row">
+                      <input
+                        type="text"
+                        placeholder="Type your answer…"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                        autoFocus
+                        disabled={loading}
+                      />
+                      <button className="chat-send-btn" onClick={handleSend} disabled={loading || !chatInput.trim()}>
+                        →
+                      </button>
                     </div>
                   )}
-                  <button className="btn-primary" onClick={handleCheckin} style={{ marginTop: 16 }}>
-                    Get more questions
-                  </button>
-                </>
+
+                  {checkinPhase === "done" && (
+                    <>
+                      <p className="chat-done-note">Check back tomorrow for Day {(checkinDay || 1) + 1}.</p>
+                      <button className="btn-primary" onClick={handleCheckin} style={{ marginTop: 12 }}>
+                        Get more questions
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
 
               {error && <p className="error">{error}</p>}
