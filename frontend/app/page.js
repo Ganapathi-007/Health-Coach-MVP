@@ -19,6 +19,8 @@ function HealthCoach() {
   const [authLoading, setAuthLoading] = useState(true);
   const [loginEmail, setLoginEmail] = useState("");
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
 
   const [sessionId, setSessionId] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -43,6 +45,12 @@ function HealthCoach() {
 
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+
+  useEffect(() => {
+    if (sessionId && profile && tab === "onboard") {
+      setTab("checkin");
+    }
+  }, [sessionId, profile]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -84,11 +92,18 @@ function HealthCoach() {
 
   async function handleMagicLink() {
     if (!loginEmail.trim()) return;
+    setLoginLoading(true);
+    setLoginError("");
     const { error } = await supabase.auth.signInWithOtp({
       email: loginEmail.trim(),
       options: { emailRedirectTo: window.location.origin },
     });
-    if (!error) setMagicLinkSent(true);
+    if (error) {
+      setLoginError(error.message);
+    } else {
+      setMagicLinkSent(true);
+    }
+    setLoginLoading(false);
   }
 
   async function handleLogout() {
@@ -266,10 +281,11 @@ function HealthCoach() {
               <button
                 className="btn-primary login-btn"
                 onClick={handleMagicLink}
-                disabled={!loginEmail.trim()}
+                disabled={!loginEmail.trim() || loginLoading}
               >
-                Send login link →
+                {loginLoading ? "Sending…" : "Send login link →"}
               </button>
+              {loginError && <p className="error" style={{ marginTop: 10 }}>{loginError}</p>}
             </>
           )}
         </div>
