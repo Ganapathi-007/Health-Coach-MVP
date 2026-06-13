@@ -71,11 +71,12 @@ def checkin_respond(request: RespondRequest):
         day, request.questions, request.responses, session.profile
     )
 
+    session.profile.current_day += 1
     if session.check_ins:
         session.check_ins[-1].user_responses = request.responses
-        memory.update_session(session)
+    memory.update_session(session)
 
-    return RespondResponse(coaching=coaching)
+    return RespondResponse(coaching=coaching, new_day=session.profile.current_day)
 
 
 @app.post("/ask", response_model=AskResponse)

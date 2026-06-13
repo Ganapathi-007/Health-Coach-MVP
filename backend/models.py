@@ -48,3 +48,4 @@ class RespondRequest(BaseModel):
 
 class RespondResponse(BaseModel):
     coaching: str
+    new_day: int

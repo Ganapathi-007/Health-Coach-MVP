@@ -110,6 +110,7 @@ function HealthCoach() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "API error");
         setCoaching(data.coaching);
+        setProfile(prev => prev ? { ...prev, current_day: data.new_day } : prev);
         setCheckinPhase("done");
       } catch (e) {
         setError(`Could not get coach feedback: ${e.message}`);
