@@ -1,14 +1,24 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import { createClient } from "@supabase/supabase-js";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
+
 function HealthCoach() {
-  const searchParams = useSearchParams();
   const router = useRouter();
+
+  const [authUser, setAuthUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
 
   const [sessionId, setSessionId] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -25,26 +35,75 @@ function HealthCoach() {
 
   const [checkinDay, setCheckinDay] = useState(null);
   const [questions, setQuestions] = useState([]);
-  const [checkinPhase, setCheckinPhase] = useState("idle"); // idle | chatting | done
+  const [checkinPhase, setCheckinPhase] = useState("idle");
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState([]);
-  const chatEndRef = useState(null);
 
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
 
   useEffect(() => {
-    const sid = searchParams.get("session_id");
-    if (sid && !sessionId) {
-      setSessionId(sid);
-      setTab("checkin");
-    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        const user = session?.user ?? null;
+        setAuthUser(user);
+
+        if (user && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
+          // Pre-fill name from Google profile
+          const googleName =
+            user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            "";
+          if (googleName) setFormName(googleName);
+
+          // Try to restore existing health coach session
+          try {
+            const res = await fetch(`${API}/auth/me`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ user_id: user.id }),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              setSessionId(data.session_id);
+              setProfile(data.profile);
+              setWelcome(data.welcome_message);
+              setTab("checkin");
+            }
+          } catch {}
+        }
+
+        setAuthLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  function updateUrl(sid) {
-    router.replace(`/?session_id=${sid}`, { scroll: false });
+  async function handleMagicLink() {
+    if (!loginEmail.trim()) return;
+    const { error } = await supabase.auth.signInWithOtp({
+      email: loginEmail.trim(),
+      options: { emailRedirectTo: window.location.origin },
+    });
+    if (!error) setMagicLinkSent(true);
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setAuthUser(null);
+    setSessionId(null);
+    setProfile(null);
+    setWelcome("");
+    setFormName("");
+    setFormAge("");
+    setFormWeight("");
+    setFormHeight("");
+    setFormConcerns("");
+    setTab("onboard");
+    router.replace("/", { scroll: false });
   }
 
   async function handleOnboard() {
@@ -59,16 +118,17 @@ function HealthCoach() {
         formHeight && `Height: ${formHeight}`,
         `Health concerns and goals: ${formConcerns}`,
       ].filter(Boolean).join("\n");
+
       const res = await fetch(`${API}/onboard`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ raw_text: rawText }),
+        body: JSON.stringify({ raw_text: rawText, user_id: authUser?.id }),
       });
       const data = await res.json();
       setSessionId(data.session_id);
       setProfile(data.profile);
       setWelcome(data.welcome_message);
-      updateUrl(data.session_id);
+      setTab("checkin");
     } catch {
       setError("Could not reach the backend. Make sure uvicorn is running on port 8000.");
     }
@@ -169,6 +229,55 @@ function HealthCoach() {
     { key: "ask", icon: "?", label: "Ask your coach", requiresSession: true },
   ];
 
+  // ── Loading auth state ──
+  if (authLoading) {
+    return (
+      <div className="auth-loading">
+        <div className="auth-loading-inner">
+          <div className="logo-icon" style={{ margin: "0 auto 16px", width: 48, height: 48, fontSize: 24 }}>🌿</div>
+          <p>Loading…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Not logged in → show login screen ──
+  if (!authUser) {
+    return (
+      <div className="login-screen">
+        <div className="login-card">
+          <div className="login-logo">🌿</div>
+          <h1>Health Coach</h1>
+          <p>Your personal 30-day wellness program, powered by AI.</p>
+          {magicLinkSent ? (
+            <div className="magic-sent">
+              Check your email — we sent a login link to <strong>{loginEmail}</strong>.
+            </div>
+          ) : (
+            <>
+              <input
+                type="email"
+                className="login-email-input"
+                placeholder="Enter your email"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleMagicLink()}
+              />
+              <button
+                className="btn-primary login-btn"
+                onClick={handleMagicLink}
+                disabled={!loginEmail.trim()}
+              >
+                Send login link →
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Logged in → main app ──
   return (
     <div className="app">
       {/* Sidebar */}
@@ -186,7 +295,7 @@ function HealthCoach() {
           <button
             key={item.key}
             className={`nav-item ${tab === item.key ? "active" : ""} ${item.requiresSession && !sessionId ? "disabled" : ""}`}
-            onClick={() => !( item.requiresSession && !sessionId) && setTab(item.key)}
+            onClick={() => !(item.requiresSession && !sessionId) && setTab(item.key)}
           >
             <span className="nav-icon">{item.icon}</span>
             {item.label}
@@ -203,14 +312,13 @@ function HealthCoach() {
             <div className="progress-bar-bg">
               <div className="progress-bar-fill" style={{ width: `${progressPct}%` }} />
             </div>
-            <div className="session-link">
-              <span>Shareable link</span>
-              {typeof window !== "undefined"
-                ? `${window.location.origin}/?session_id=${sessionId}`
-                : ""}
-            </div>
           </div>
         )}
+
+        <div className="user-section">
+          <div className="user-email">{authUser.email}</div>
+          <button className="btn-logout" onClick={handleLogout}>Sign out</button>
+        </div>
       </aside>
 
       {/* Main */}

@@ -8,6 +8,7 @@ from models import (
     CheckInRequest, CheckInResponse,
     AskRequest, AskResponse,
     RespondRequest, RespondResponse,
+    UserSessionRequest,
     Session, CheckIn
 )
 from agent import parse_patient_profile, generate_checkin_questions, answer_from_protocol, generate_coaching_response
@@ -34,7 +35,7 @@ def onboard(request: OnboardRequest):
     profile = parse_patient_profile(request.raw_text)
     session_id = str(uuid.uuid4())
     session = Session(session_id=session_id, profile=profile, last_checkin_date=str(date.today()))
-    memory.save_session(session)
+    memory.save_session(session, user_id=request.user_id)
 
     name_part = f", {profile.name}" if profile.name else ""
     goals_text = ", ".join(profile.goals) if profile.goals else "your wellness goals"
@@ -44,6 +45,19 @@ def onboard(request: OnboardRequest):
         f"Let's build something lasting."
     )
     return OnboardResponse(session_id=session_id, profile=profile, welcome_message=welcome)
+
+
+@app.post("/auth/me", response_model=OnboardResponse)
+def get_my_session(request: UserSessionRequest):
+    session = memory.get_session_by_user(request.user_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="No session found")
+    name_part = f", {session.profile.name}" if session.profile.name else ""
+    return OnboardResponse(
+        session_id=session.session_id,
+        profile=session.profile,
+        welcome_message=f"Welcome back{name_part}."
+    )
 
 
 @app.post("/checkin", response_model=CheckInResponse)

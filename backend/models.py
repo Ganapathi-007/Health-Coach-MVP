@@ -25,6 +25,10 @@ class Session(BaseModel):
 
 class OnboardRequest(BaseModel):
     raw_text: str
+    user_id: Optional[str] = None
+
+class UserSessionRequest(BaseModel):
+    user_id: str
 
 class OnboardResponse(BaseModel):
     session_id: str
