@@ -33,7 +33,7 @@ def health_check():
 def onboard(request: OnboardRequest):
     profile = parse_patient_profile(request.raw_text)
     session_id = str(uuid.uuid4())
-    session = Session(session_id=session_id, profile=profile)
+    session = Session(session_id=session_id, profile=profile, last_checkin_date=str(date.today()))
     memory.save_session(session)
 
     goals_text = ", ".join(profile.goals) if profile.goals else "your wellness goals"
