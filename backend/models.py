@@ -57,3 +57,11 @@ class RespondRequest(BaseModel):
 class RespondResponse(BaseModel):
     coaching: str
     new_day: int
+
+class ProgressRequest(BaseModel):
+    session_id: str
+
+class ProgressResponse(BaseModel):
+    summary: str
+    check_in_count: int
+    has_comparison: bool

@@ -8,8 +8,8 @@ import { createClient } from "@supabase/supabase-js";
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://placeholder.supabase.co",
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "placeholder-key"
 );
 
 function HealthCoach() {
@@ -18,7 +18,8 @@ function HealthCoach() {
   const [authUser, setAuthUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [loginEmail, setLoginEmail] = useState("");
-  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [loginPassword, setLoginPassword] = useState("");
+  const [authMode, setAuthMode] = useState("signin"); // "signin" | "signup"
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
@@ -46,11 +47,21 @@ function HealthCoach() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
 
+  const [progressSummary, setProgressSummary] = useState("");
+  const [progressCount, setProgressCount] = useState(0);
+  const [progressHasComparison, setProgressHasComparison] = useState(false);
+
   useEffect(() => {
     if (sessionId && profile && tab === "onboard") {
       setTab("checkin");
     }
   }, [sessionId, profile]);
+
+  useEffect(() => {
+    if (tab === "progress" && sessionId && progressCount === 0 && !progressSummary) {
+      handleProgress();
+    }
+  }, [tab]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -90,18 +101,26 @@ function HealthCoach() {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function handleMagicLink() {
-    if (!loginEmail.trim()) return;
+  async function handleAuth() {
+    if (!loginEmail.trim() || !loginPassword.trim()) return;
     setLoginLoading(true);
     setLoginError("");
-    const { error } = await supabase.auth.signInWithOtp({
-      email: loginEmail.trim(),
-      options: { emailRedirectTo: window.location.origin },
-    });
-    if (error) {
-      setLoginError(error.message);
+    if (authMode === "signup") {
+      const { data, error } = await supabase.auth.signUp({
+        email: loginEmail.trim(),
+        password: loginPassword.trim(),
+      });
+      if (error) {
+        setLoginError(error.message);
+      } else if (!data.session) {
+        setLoginError("Account created — check your email to confirm it, then sign in.");
+      }
     } else {
-      setMagicLinkSent(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail.trim(),
+        password: loginPassword.trim(),
+      });
+      if (error) setLoginError(error.message);
     }
     setLoginLoading(false);
   }
@@ -216,6 +235,27 @@ function HealthCoach() {
     }
   }
 
+  async function handleProgress() {
+    if (!sessionId) return;
+    setLoading(true);
+    setError("");
+    setProgressSummary("");
+    try {
+      const res = await fetch(`${API}/progress`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+      const data = await res.json();
+      setProgressSummary(data.summary);
+      setProgressCount(data.check_in_count);
+      setProgressHasComparison(data.has_comparison);
+    } catch {
+      setError("Could not reach the backend.");
+    }
+    setLoading(false);
+  }
+
   async function handleAsk() {
     if (!question.trim() || !sessionId) return;
     setLoading(true);
@@ -241,6 +281,7 @@ function HealthCoach() {
   const navItems = [
     { key: "onboard", icon: "◎", label: "Onboard" },
     { key: "checkin", icon: "✓", label: "Daily Check-in", requiresSession: true },
+    { key: "progress", icon: "↗", label: "Progress", requiresSession: true },
     { key: "ask", icon: "?", label: "Ask your coach", requiresSession: true },
   ];
 
@@ -264,30 +305,40 @@ function HealthCoach() {
           <div className="login-logo">🌿</div>
           <h1>Health Coach</h1>
           <p>Your personal 30-day wellness program, powered by AI.</p>
-          {magicLinkSent ? (
-            <div className="magic-sent">
-              Check your email — we sent a login link to <strong>{loginEmail}</strong>.
-            </div>
-          ) : (
-            <>
-              <input
-                type="email"
-                className="login-email-input"
-                placeholder="Enter your email"
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleMagicLink()}
-              />
-              <button
-                className="btn-primary login-btn"
-                onClick={handleMagicLink}
-                disabled={!loginEmail.trim() || loginLoading}
-              >
-                {loginLoading ? "Sending…" : "Send login link →"}
-              </button>
-              {loginError && <p className="error" style={{ marginTop: 10 }}>{loginError}</p>}
-            </>
-          )}
+          <div className="auth-toggle">
+            <button
+              className={authMode === "signin" ? "auth-toggle-btn active" : "auth-toggle-btn"}
+              onClick={() => { setAuthMode("signin"); setLoginError(""); }}
+            >Sign in</button>
+            <button
+              className={authMode === "signup" ? "auth-toggle-btn active" : "auth-toggle-btn"}
+              onClick={() => { setAuthMode("signup"); setLoginError(""); }}
+            >Create account</button>
+          </div>
+          <input
+            type="email"
+            className="login-email-input"
+            placeholder="Email"
+            value={loginEmail}
+            onChange={(e) => setLoginEmail(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAuth()}
+          />
+          <input
+            type="password"
+            className="login-email-input"
+            placeholder="Password"
+            value={loginPassword}
+            onChange={(e) => setLoginPassword(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAuth()}
+          />
+          <button
+            className="btn-primary login-btn"
+            onClick={handleAuth}
+            disabled={!loginEmail.trim() || !loginPassword.trim() || loginLoading}
+          >
+            {loginLoading ? "Please wait…" : authMode === "signup" ? "Create account →" : "Sign in →"}
+          </button>
+          {loginError && <p className="error" style={{ marginTop: 10 }}>{loginError}</p>}
         </div>
       </div>
     );
@@ -529,6 +580,40 @@ function HealthCoach() {
                 </div>
               )}
 
+              {error && <p className="error">{error}</p>}
+            </div>
+          </>
+        )}
+
+        {tab === "progress" && (
+          <>
+            <div className="page-header">
+              <h2>Progress</h2>
+              <p>Patterns and trends across your check-ins, analyzed by your coach.</p>
+            </div>
+            <div className="card">
+              {progressCount < 3 && !progressSummary ? (
+                <div className="progress-empty">
+                  <p>You need at least 3 completed check-ins for a progress report.</p>
+                  <p style={{ marginTop: 8, color: "#aaa" }}>You have {progressCount} so far. Keep checking in daily.</p>
+                </div>
+              ) : (
+                <>
+                  <button className="btn-primary" onClick={handleProgress} disabled={loading}>
+                    {loading ? "Analyzing your check-ins…" : progressSummary ? "Refresh report" : "Generate progress report"}
+                  </button>
+                  {progressSummary && (
+                    <div className="progress-report">
+                      <div className="progress-report-meta">
+                        {progressHasComparison
+                          ? `Based on your last 14 check-ins — comparing this week to last week`
+                          : `Based on your last ${progressCount} check-ins`}
+                      </div>
+                      <ReactMarkdown>{progressSummary}</ReactMarkdown>
+                    </div>
+                  )}
+                </>
+              )}
               {error && <p className="error">{error}</p>}
             </div>
           </>

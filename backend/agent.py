@@ -94,6 +94,36 @@ Rules:
     return response.content[0].text
 
 
+def generate_progress_summary(profile: PatientProfile, check_ins: list) -> str:
+    def format_checkins(checkins):
+        parts = []
+        for c in checkins:
+            pairs = "\n".join([f"  Q: {q}\n  A: {r}" for q, r in zip(c.questions_asked, c.user_responses)])
+            parts.append(f"Day {c.day}:\n{pairs}")
+        return "\n\n".join(parts)
+
+    this_week = check_ins[-7:]
+    last_week = check_ins[-14:-7] if len(check_ins) >= 8 else []
+
+    last_week_text = format_checkins(last_week) if last_week else "No previous week data yet."
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=500,
+        system=f"""You are a health coach reviewing a patient's progress.
+Patient: {profile.name or 'Patient'}, age={profile.age}, goals={profile.goals}, concerns={profile.health_concerns}.
+Rules:
+- No emojis. No filler like "great job".
+- Be specific — reference actual things the patient said in their responses.
+- Identify 2-3 clear trends (improving, worsening, or consistent) across the check-ins.
+- If last week data exists, compare directly. If not, summarize patterns from this week only.
+- End with 1 concrete focus area for the coming days.
+- Max 150 words. Warm but direct.""",
+        messages=[{"role": "user", "content": f"THIS WEEK:\n{format_checkins(this_week)}\n\nLAST WEEK:\n{last_week_text}"}]
+    )
+    return response.content[0].text
+
+
 def answer_from_protocol(question: str, protocol_context: str, profile: PatientProfile) -> str:
     response = client.messages.create(
         model=MODEL,

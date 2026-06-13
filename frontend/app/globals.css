@@ -457,6 +457,39 @@ input[type="number"]:focus {
   margin-top: 10px;
 }
 
+/* ── Progress tab ── */
+.progress-empty {
+  font-size: 15px;
+  color: #888;
+  line-height: 1.7;
+}
+
+.progress-report {
+  margin-top: 20px;
+  background: #f7f4ef;
+  border-radius: 12px;
+  padding: 20px 22px;
+  font-size: 15px;
+  line-height: 1.75;
+  color: #1a1a1a;
+  border-left: 3px solid #4a7c59;
+}
+
+.progress-report p { margin-bottom: 10px; }
+.progress-report p:last-child { margin-bottom: 0; }
+.progress-report ul, .progress-report ol { padding-left: 20px; margin-bottom: 10px; }
+.progress-report li { margin-bottom: 4px; }
+.progress-report strong { font-weight: 600; }
+
+.progress-report-meta {
+  font-size: 11px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+
 /* ── Auth / Login ── */
 .auth-loading {
   display: flex;
@@ -533,14 +566,33 @@ input[type="number"]:focus {
   margin-top: 0;
 }
 
-.magic-sent {
-  background: #eef5f1;
+.auth-toggle {
+  display: flex;
+  background: #f0ece4;
   border-radius: 10px;
-  padding: 16px;
+  padding: 4px;
+  margin-bottom: 16px;
+  gap: 4px;
+}
+
+.auth-toggle-btn {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #666;
   font-size: 14px;
-  color: #2d5a3d;
-  line-height: 1.6;
-  border-left: 3px solid #4a7c59;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.auth-toggle-btn.active {
+  background: #fff;
+  color: #1a1a1a;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .btn-google {

@@ -8,10 +8,11 @@ from models import (
     CheckInRequest, CheckInResponse,
     AskRequest, AskResponse,
     RespondRequest, RespondResponse,
+    ProgressRequest, ProgressResponse,
     UserSessionRequest,
     Session, CheckIn
 )
-from agent import parse_patient_profile, generate_checkin_questions, answer_from_protocol, generate_coaching_response
+from agent import parse_patient_profile, generate_checkin_questions, answer_from_protocol, generate_coaching_response, generate_progress_summary
 from pdf_loader import protocol_text
 import memory
 
@@ -97,6 +98,26 @@ def checkin_respond(request: RespondRequest):
     memory.update_session(session)
 
     return RespondResponse(coaching=coaching, new_day=session.profile.current_day)
+
+
+@app.post("/progress", response_model=ProgressResponse)
+def get_progress(request: ProgressRequest):
+    session = memory.get_session(request.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    completed = [c for c in session.check_ins if c.user_responses]
+    count = len(completed)
+
+    if count < 3:
+        return ProgressResponse(summary="", check_in_count=count, has_comparison=False)
+
+    summary = generate_progress_summary(session.profile, completed)
+    return ProgressResponse(
+        summary=summary,
+        check_in_count=count,
+        has_comparison=count >= 8
+    )
 
 
 @app.post("/ask", response_model=AskResponse)
