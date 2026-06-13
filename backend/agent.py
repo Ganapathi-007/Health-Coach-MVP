@@ -13,15 +13,19 @@ def parse_patient_profile(raw_text: str) -> PatientProfile:
     response = client.messages.create(
         model=MODEL,
         max_tokens=512,
-        system="""You are a health data parser. Extract patient info from unstructured text.
+        system="""You are a health data parser. Extract patient info from intake form data.
 Return ONLY a valid JSON object with exactly these fields:
 {
+  "name": string or null,
   "age": integer or null,
+  "weight": string or null,
+  "height": string or null,
   "sleep_hours": float or null,
   "goals": ["list", "of", "strings"],
   "current_habits": ["list", "of", "strings"],
   "health_concerns": ["list", "of", "strings"]
 }
+Infer goals and concerns from the "Health concerns and goals" field.
 No explanation. No markdown. Just the JSON object.""",
         messages=[{"role": "user", "content": raw_text}]
     )

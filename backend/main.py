@@ -36,9 +36,10 @@ def onboard(request: OnboardRequest):
     session = Session(session_id=session_id, profile=profile, last_checkin_date=str(date.today()))
     memory.save_session(session)
 
+    name_part = f", {profile.name}" if profile.name else ""
     goals_text = ", ".join(profile.goals) if profile.goals else "your wellness goals"
     welcome = (
-        f"Welcome! I've set up your profile. You're on Day {profile.current_day} "
+        f"Welcome{name_part}. I've set up your profile. You're on Day {profile.current_day} "
         f"of your 30-day program. I'll be checking in with you daily to help you make progress on {goals_text}. "
         f"Let's build something lasting."
     )

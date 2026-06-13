@@ -212,6 +212,27 @@ body {
   margin-top: 20px;
 }
 
+/* ── Intake form ── */
+.intake-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.intake-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.intake-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
 .profile-stat {
   background: #f7f4ef;
   border-radius: 12px;

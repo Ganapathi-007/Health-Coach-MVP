@@ -16,7 +16,11 @@ function HealthCoach() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [rawText, setRawText] = useState("");
+  const [formName, setFormName] = useState("");
+  const [formAge, setFormAge] = useState("");
+  const [formWeight, setFormWeight] = useState("");
+  const [formHeight, setFormHeight] = useState("");
+  const [formConcerns, setFormConcerns] = useState("");
   const [welcome, setWelcome] = useState("");
 
   const [checkinDay, setCheckinDay] = useState(null);
@@ -44,10 +48,17 @@ function HealthCoach() {
   }
 
   async function handleOnboard() {
-    if (!rawText.trim()) return;
+    if (!formConcerns.trim()) return;
     setLoading(true);
     setError("");
     try {
+      const rawText = [
+        formName && `Name: ${formName}`,
+        formAge && `Age: ${formAge}`,
+        formWeight && `Weight: ${formWeight}`,
+        formHeight && `Height: ${formHeight}`,
+        `Health concerns and goals: ${formConcerns}`,
+      ].filter(Boolean).join("\n");
       const res = await fetch(`${API}/onboard`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -214,15 +225,56 @@ function HealthCoach() {
 
             <div className="card">
               <div className="card-title">About you</div>
-              <textarea
-                placeholder="Write freely — your age, sleep habits, health goals, daily routine, anything on your mind. The more you share, the better I can personalize your program."
-                value={rawText}
-                onChange={(e) => setRawText(e.target.value)}
-              />
+              <div className="intake-grid">
+                <div className="intake-field">
+                  <label>Name</label>
+                  <input
+                    type="text"
+                    placeholder="Your name"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                  />
+                </div>
+                <div className="intake-field">
+                  <label>Age</label>
+                  <input
+                    type="number"
+                    placeholder="Years"
+                    value={formAge}
+                    onChange={(e) => setFormAge(e.target.value)}
+                  />
+                </div>
+                <div className="intake-field">
+                  <label>Weight</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 70 kg"
+                    value={formWeight}
+                    onChange={(e) => setFormWeight(e.target.value)}
+                  />
+                </div>
+                <div className="intake-field">
+                  <label>Height</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 175 cm"
+                    value={formHeight}
+                    onChange={(e) => setFormHeight(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="intake-field" style={{ marginTop: 20 }}>
+                <label>What brings you here?</label>
+                <textarea
+                  placeholder="Your health goals, concerns, current habits, sleep schedule — anything on your mind. The more you share, the better I can personalize your program."
+                  value={formConcerns}
+                  onChange={(e) => setFormConcerns(e.target.value)}
+                />
+              </div>
               <button
                 className="btn-primary"
                 onClick={handleOnboard}
-                disabled={loading || !rawText.trim()}
+                disabled={loading || !formConcerns.trim()}
               >
                 {loading ? "Setting up your profile…" : "Start my 30-day program →"}
               </button>
@@ -235,8 +287,20 @@ function HealthCoach() {
                 <div className="card-title">Your profile</div>
                 <div className="profile-grid">
                   <div className="profile-stat">
+                    <div className="stat-label">Name</div>
+                    <div className="stat-value">{profile.name ?? "—"}</div>
+                  </div>
+                  <div className="profile-stat">
                     <div className="stat-label">Age</div>
                     <div className="stat-value">{profile.age ?? "—"}</div>
+                  </div>
+                  <div className="profile-stat">
+                    <div className="stat-label">Weight</div>
+                    <div className="stat-value">{profile.weight ?? "—"}</div>
+                  </div>
+                  <div className="profile-stat">
+                    <div className="stat-label">Height</div>
+                    <div className="stat-value">{profile.height ?? "—"}</div>
                   </div>
                   <div className="profile-stat">
                     <div className="stat-label">Sleep</div>

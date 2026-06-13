@@ -2,7 +2,10 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 class PatientProfile(BaseModel):
+    name: Optional[str] = None
     age: Optional[int] = None
+    weight: Optional[str] = None
+    height: Optional[str] = None
     sleep_hours: Optional[float] = None
     goals: List[str] = []
     current_habits: List[str] = []
