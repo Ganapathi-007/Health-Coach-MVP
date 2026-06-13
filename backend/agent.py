@@ -54,6 +54,21 @@ def generate_checkin_questions(day: int, profile: PatientProfile, previous_check
     if previous_checkins and previous_checkins[-1].user_responses:
         previous_summary += f"\nLast responses: {previous_checkins[-1].user_responses}"
 
+    pattern_context = ""
+    completed = [c for c in previous_checkins if c.user_responses]
+    if len(completed) >= 3:
+        recent_lines = []
+        for c in completed[-7:]:
+            pairs = " | ".join([f"Q: {q} — A: {r}" for q, r in zip(c.questions_asked, c.user_responses)])
+            recent_lines.append(f"Day {c.day}: {pairs}")
+        pattern_context = (
+            "\n\nRecent check-in history (last 7 days):\n" + "\n".join(recent_lines) +
+            "\n\nPattern instruction: Scan the history above for anything recurring — same struggle 3+ days, "
+            "consistent avoidance, repeated timing, a habit that keeps slipping. "
+            "If you find one, make at least 1 question directly reference it by name. "
+            "Don't be subtle — call it out. If no clear pattern exists, ignore this instruction."
+        )
+
     concerns = ", ".join(profile.health_concerns) if profile.health_concerns else ""
     goals = ", ".join(profile.goals) if profile.goals else ""
 
@@ -63,7 +78,7 @@ def generate_checkin_questions(day: int, profile: PatientProfile, previous_check
         system=f"""You are a health coach running a 30-day wellness program.
 Patient: age={profile.age}, sleep={profile.sleep_hours}hrs, goals={goals}, health concerns={concerns}.
 Today is Day {day} ({week}).
-{previous_summary}
+{previous_summary}{pattern_context}
 Generate exactly 3 check-in questions focused on {focus}.
 Critically: connect the week's focus to this patient's specific goals and concerns.
 For example, if they have anxiety — mention how sleep affects anxiety.
