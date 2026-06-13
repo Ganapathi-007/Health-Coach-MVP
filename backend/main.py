@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -71,7 +72,11 @@ def checkin_respond(request: RespondRequest):
         day, request.questions, request.responses, session.profile
     )
 
-    session.profile.current_day += 1
+    today = str(date.today())
+    if session.last_checkin_date != today:
+        session.profile.current_day += 1
+        session.last_checkin_date = today
+
     if session.check_ins:
         session.check_ins[-1].user_responses = request.responses
     memory.update_session(session)
