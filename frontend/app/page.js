@@ -20,7 +20,7 @@ function HealthCoach() {
   const signingUp = useRef(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [authMode, setAuthMode] = useState("signin"); // "signin" | "signup"
+  const [authMode, setAuthMode] = useState("signin"); // "signin" | "signup" | "forgot" | "reset"
   const [loginError, setLoginError] = useState("");
   const [loginSuccess, setLoginSuccess] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
@@ -69,6 +69,13 @@ function HealthCoach() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (signingUp.current) return;
+
+        if (event === "PASSWORD_RECOVERY") {
+          setAuthMode("reset");
+          setAuthLoading(false);
+          return;
+        }
+
         const user = session?.user ?? null;
         setAuthUser(user);
 
@@ -103,6 +110,38 @@ function HealthCoach() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  async function handleForgotPassword() {
+    if (!loginEmail.trim()) return;
+    setLoginLoading(true);
+    setLoginError("");
+    const { error } = await supabase.auth.resetPasswordForEmail(loginEmail.trim(), {
+      redirectTo: window.location.origin,
+    });
+    if (error) {
+      setLoginError(error.message);
+    } else {
+      setLoginSuccess("Password reset email sent. Check your inbox.");
+    }
+    setLoginLoading(false);
+  }
+
+  async function handleResetPassword() {
+    if (!loginPassword.trim()) return;
+    setLoginLoading(true);
+    setLoginError("");
+    const { error } = await supabase.auth.updateUser({ password: loginPassword.trim() });
+    if (error) {
+      setLoginError(error.message);
+    } else {
+      await supabase.auth.signOut();
+      setLoginPassword("");
+      setLoginError("");
+      setLoginSuccess("Password updated. Sign in with your new password.");
+      setAuthMode("signin");
+    }
+    setLoginLoading(false);
+  }
 
   async function handleAuth() {
     if (!loginEmail.trim() || !loginPassword.trim()) return;
@@ -321,45 +360,95 @@ function HealthCoach() {
   }
 
   // ── Not logged in → show login screen ──
-  if (!authUser) {
+  if (!authUser && authMode !== "reset") {
     return (
       <div className="login-screen">
         <div className="login-card">
           <div className="login-logo">🌿</div>
           <h1>Health Coach</h1>
           <p>Your personal 30-day wellness program, powered by AI.</p>
-          <div className="auth-toggle">
-            <button
-              className={authMode === "signin" ? "auth-toggle-btn active" : "auth-toggle-btn"}
-              onClick={() => { setAuthMode("signin"); setLoginError(""); setLoginSuccess(""); }}
-            >Sign in</button>
-            <button
-              className={authMode === "signup" ? "auth-toggle-btn active" : "auth-toggle-btn"}
-              onClick={() => { setAuthMode("signup"); setLoginError(""); setLoginSuccess(""); }}
-            >Create account</button>
-          </div>
+
+          {authMode !== "forgot" && (
+            <div className="auth-toggle">
+              <button
+                className={authMode === "signin" ? "auth-toggle-btn active" : "auth-toggle-btn"}
+                onClick={() => { setAuthMode("signin"); setLoginError(""); setLoginSuccess(""); }}
+              >Sign in</button>
+              <button
+                className={authMode === "signup" ? "auth-toggle-btn active" : "auth-toggle-btn"}
+                onClick={() => { setAuthMode("signup"); setLoginError(""); setLoginSuccess(""); }}
+              >Create account</button>
+            </div>
+          )}
+
           <input
             type="email"
             className="login-email-input"
             placeholder="Email"
             value={loginEmail}
             onChange={(e) => setLoginEmail(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAuth()}
+            onKeyDown={(e) => e.key === "Enter" && (authMode === "forgot" ? handleForgotPassword() : handleAuth())}
           />
+
+          {authMode !== "forgot" && (
+            <input
+              type="password"
+              className="login-email-input"
+              placeholder="Password"
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAuth()}
+            />
+          )}
+
+          <button
+            className="btn-primary login-btn"
+            onClick={authMode === "forgot" ? handleForgotPassword : handleAuth}
+            disabled={!loginEmail.trim() || (authMode !== "forgot" && !loginPassword.trim()) || loginLoading}
+          >
+            {loginLoading ? "Please wait…" : authMode === "signup" ? "Create account →" : authMode === "forgot" ? "Send reset link →" : "Sign in →"}
+          </button>
+
+          {authMode === "signin" && (
+            <button className="forgot-link" onClick={() => { setAuthMode("forgot"); setLoginError(""); setLoginSuccess(""); }}>
+              Forgot password?
+            </button>
+          )}
+          {authMode === "forgot" && (
+            <button className="forgot-link" onClick={() => { setAuthMode("signin"); setLoginError(""); setLoginSuccess(""); }}>
+              Back to sign in
+            </button>
+          )}
+
+          {loginSuccess && <p className="login-success">{loginSuccess}</p>}
+          {loginError && <p className="error" style={{ marginTop: 10 }}>{loginError}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Password reset screen ──
+  if (authMode === "reset") {
+    return (
+      <div className="login-screen">
+        <div className="login-card">
+          <div className="login-logo">🌿</div>
+          <h1>Set new password</h1>
+          <p>Enter a new password for your account.</p>
           <input
             type="password"
             className="login-email-input"
-            placeholder="Password"
+            placeholder="New password"
             value={loginPassword}
             onChange={(e) => setLoginPassword(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAuth()}
+            onKeyDown={(e) => e.key === "Enter" && handleResetPassword()}
           />
           <button
             className="btn-primary login-btn"
-            onClick={handleAuth}
-            disabled={!loginEmail.trim() || !loginPassword.trim() || loginLoading}
+            onClick={handleResetPassword}
+            disabled={!loginPassword.trim() || loginLoading}
           >
-            {loginLoading ? "Please wait…" : authMode === "signup" ? "Create account →" : "Sign in →"}
+            {loginLoading ? "Updating…" : "Set new password →"}
           </button>
           {loginSuccess && <p className="login-success">{loginSuccess}</p>}
           {loginError && <p className="error" style={{ marginTop: 10 }}>{loginError}</p>}
