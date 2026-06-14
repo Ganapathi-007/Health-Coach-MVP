@@ -12,7 +12,7 @@ from models import (
     UserSessionRequest,
     Session, CheckIn
 )
-from agent import parse_patient_profile, detect_program_route, generate_checkin_questions, answer_from_protocol, generate_coaching_response, generate_progress_summary
+from agent import parse_patient_profile, detect_program_route, generate_checkin_questions, answer_from_protocol, generate_coaching_response, extract_commitment, generate_progress_summary
 from pdf_loader import protocol_text
 import memory
 
@@ -68,13 +68,17 @@ def checkin(request: CheckInRequest):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    day = session.profile.current_day
-
+    today = str(date.today())
     missed_days = 0
-    if session.last_checkin_date:
+
+    if session.last_checkin_date and session.last_checkin_date != today:
         last_date = date.fromisoformat(session.last_checkin_date)
         gap = (date.today() - last_date).days
         missed_days = max(0, gap - 1)
+        session.profile.current_day += 1
+        session.last_checkin_date = today
+
+    day = session.profile.current_day
 
     questions = generate_checkin_questions(day, session.profile, session.check_ins)
     new_checkin = CheckIn(day=day, questions_asked=questions)
@@ -95,16 +99,13 @@ def checkin_respond(request: RespondRequest):
         day, request.questions, request.responses, session.profile
     )
 
-    today = str(date.today())
-    if session.last_checkin_date != today:
-        session.profile.current_day += 1
-        session.last_checkin_date = today
-
+    commitment = extract_commitment(coaching)
     if session.check_ins:
         session.check_ins[-1].user_responses = request.responses
+        session.check_ins[-1].commitment = commitment
     memory.update_session(session)
 
-    return RespondResponse(coaching=coaching, new_day=session.profile.current_day)
+    return RespondResponse(coaching=coaching, new_day=session.profile.current_day, commitment=commitment)
 
 
 @app.post("/progress", response_model=ProgressResponse)

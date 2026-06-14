@@ -17,6 +17,7 @@ class CheckIn(BaseModel):
     day: int
     questions_asked: List[str] = []
     user_responses: List[str] = []
+    commitment: Optional[str] = None
 
 class Session(BaseModel):
     session_id: str
@@ -59,6 +60,7 @@ class RespondRequest(BaseModel):
 class RespondResponse(BaseModel):
     coaching: str
     new_day: int
+    commitment: Optional[str] = None
 
 class ProgressRequest(BaseModel):
     session_id: str

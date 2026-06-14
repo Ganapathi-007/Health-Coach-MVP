@@ -246,7 +246,7 @@ function HealthCoach() {
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.detail || "API error");
-          setMessages(prev => [...prev, { role: "coach", text: data.coaching, feedback: true }]);
+          setMessages(prev => [...prev, { role: "coach", text: data.coaching, feedback: true, commitment: data.commitment }]);
           setProfile(prev => prev ? { ...prev, current_day: data.new_day } : prev);
           setCheckinPhase("done");
         } catch (e) {
@@ -575,6 +575,12 @@ function HealthCoach() {
                           {msg.feedback
                             ? <ReactMarkdown>{msg.text}</ReactMarkdown>
                             : msg.text}
+                          {msg.commitment && (
+                            <div className="commitment-card">
+                              <div className="commitment-label">Your commitment for tomorrow</div>
+                              <div className="commitment-text">{msg.commitment}</div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}

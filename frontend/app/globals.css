@@ -732,6 +732,30 @@ input[type="number"]:focus {
   border-left: 3px solid #4a7c59;
 }
 
+.commitment-card {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1.5px solid #4a7c59;
+  border-radius: 10px;
+}
+
+.commitment-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #4a7c59;
+  margin-bottom: 6px;
+}
+
+.commitment-text {
+  font-size: 14px;
+  color: #1a1a1a;
+  line-height: 1.5;
+  font-style: italic;
+}
+
 .chat-bubble.user {
   background: #1b3a2d;
   color: #e8f5ee;

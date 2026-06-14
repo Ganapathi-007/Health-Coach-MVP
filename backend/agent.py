@@ -114,6 +114,14 @@ def generate_checkin_questions(day: int, profile: PatientProfile, previous_check
     if previous_checkins and previous_checkins[-1].user_responses:
         previous_summary += f"\nLast responses: {previous_checkins[-1].user_responses}"
 
+    commitment_context = ""
+    last_with_commitment = next((c for c in reversed(previous_checkins) if c.commitment), None)
+    if last_with_commitment:
+        commitment_context = (
+            f"\n\nCommitment from last check-in: \"{last_with_commitment.commitment}\""
+            f"\nMake the FIRST of your 3 questions directly ask whether they kept this commitment and how it went. Be specific — name the commitment explicitly."
+        )
+
     pattern_context = ""
     completed = [c for c in previous_checkins if c.user_responses]
     if len(completed) >= 3:
@@ -138,7 +146,7 @@ def generate_checkin_questions(day: int, profile: PatientProfile, previous_check
         system=f"""You are a health coach running a 30-day wellness program.
 Patient: age={profile.age}, sleep={profile.sleep_hours}hrs, goals={goals}, health concerns={concerns}.
 Today is Day {day} ({week}).
-{previous_summary}{pattern_context}
+{previous_summary}{commitment_context}{pattern_context}
 Generate exactly 3 check-in questions focused on {focus}.
 Critically: connect the week's focus to this patient's specific goals and concerns.
 For example, if they have anxiety — mention how sleep affects anxiety.
@@ -167,6 +175,18 @@ Rules:
         messages=[{"role": "user", "content": f"Check-in responses:\n{qa_pairs}"}]
     )
     return response.content[0].text
+
+
+def extract_commitment(coaching_text: str) -> str:
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=60,
+        system="""Extract the single most concrete, actionable commitment from this coaching response.
+Return it as a short first-person statement starting with "I will..."
+Max 20 words. Just the commitment, nothing else. No emojis.""",
+        messages=[{"role": "user", "content": coaching_text}]
+    )
+    return response.content[0].text.strip()
 
 
 def generate_progress_summary(profile: PatientProfile, check_ins: list) -> str:
