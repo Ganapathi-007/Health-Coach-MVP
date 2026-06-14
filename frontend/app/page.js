@@ -202,7 +202,15 @@ function HealthCoach() {
       const data = await res.json();
       setCheckinDay(data.day);
       setQuestions(data.questions);
-      setMessages([{ role: "coach", text: data.questions[0] }]);
+      const initialMessages = [];
+      if (data.missed_days >= 1) {
+        const missedText = data.missed_days === 1
+          ? "You missed yesterday's check-in. Consistency is what makes this work — one missed day is fine, but make it the exception. Let's get back on track."
+          : `You've been away for ${data.missed_days} days. That's a gap worth noticing. Daily check-ins are what build momentum — let's not lose what you've started.`;
+        initialMessages.push({ role: "coach", text: missedText });
+      }
+      initialMessages.push({ role: "coach", text: data.questions[0] });
+      setMessages(initialMessages);
       setCurrentQ(0);
       setCheckinPhase("chatting");
     } catch {

@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -69,13 +69,19 @@ def checkin(request: CheckInRequest):
         raise HTTPException(status_code=404, detail="Session not found")
 
     day = session.profile.current_day
-    questions = generate_checkin_questions(day, session.profile, session.check_ins)
 
+    missed_days = 0
+    if session.last_checkin_date:
+        last_date = date.fromisoformat(session.last_checkin_date)
+        gap = (date.today() - last_date).days
+        missed_days = max(0, gap - 1)
+
+    questions = generate_checkin_questions(day, session.profile, session.check_ins)
     new_checkin = CheckIn(day=day, questions_asked=questions)
     session.check_ins.append(new_checkin)
     memory.update_session(session)
 
-    return CheckInResponse(day=day, questions=questions)
+    return CheckInResponse(day=day, questions=questions, missed_days=missed_days)
 
 
 @app.post("/checkin/respond", response_model=RespondResponse)
@@ -107,7 +113,13 @@ def get_progress(request: ProgressRequest):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    completed = [c for c in session.check_ins if c.user_responses]
+    all_completed = [c for c in session.check_ins if c.user_responses]
+    seen_days = set()
+    completed = []
+    for c in all_completed:
+        if c.day not in seen_days:
+            seen_days.add(c.day)
+            completed.append(c)
     count = len(completed)
 
     if count < 3:

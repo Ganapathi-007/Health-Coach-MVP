@@ -42,6 +42,7 @@ class CheckInRequest(BaseModel):
 class CheckInResponse(BaseModel):
     day: int
     questions: List[str]
+    missed_days: int = 0
 
 class AskRequest(BaseModel):
     session_id: str
