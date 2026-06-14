@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { createClient } from "@supabase/supabase-js";
@@ -17,10 +17,12 @@ function HealthCoach() {
 
   const [authUser, setAuthUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const signingUp = useRef(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [authMode, setAuthMode] = useState("signin"); // "signin" | "signup"
   const [loginError, setLoginError] = useState("");
+  const [loginSuccess, setLoginSuccess] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
   const [sessionId, setSessionId] = useState(null);
@@ -66,6 +68,7 @@ function HealthCoach() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (signingUp.current) return;
         const user = session?.user ?? null;
         setAuthUser(user);
 
@@ -106,17 +109,24 @@ function HealthCoach() {
     setLoginLoading(true);
     setLoginError("");
     if (authMode === "signup") {
+      signingUp.current = true;
       const { data, error } = await supabase.auth.signUp({
         email: loginEmail.trim(),
         password: loginPassword.trim(),
       });
       if (error) {
+        signingUp.current = false;
         setLoginError(error.message);
-      } else if (!data.session) {
-        setLoginError("Account created — check your email to confirm it, then sign in.");
+      } else {
+        if (data.session) await supabase.auth.signOut();
+        signingUp.current = false;
+        setLoginPassword("");
+        setLoginError("");
+        setLoginSuccess("Account created! Now sign in with your credentials.");
+        setAuthMode("signin");
       }
     } else {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: loginEmail.trim(),
         password: loginPassword.trim(),
       });
@@ -136,6 +146,11 @@ function HealthCoach() {
     setFormWeight("");
     setFormHeight("");
     setFormConcerns("");
+    setLoginEmail("");
+    setLoginPassword("");
+    setLoginError("");
+    setLoginSuccess("");
+    setAuthMode("signin");
     setTab("onboard");
     router.replace("/", { scroll: false });
   }
@@ -308,11 +323,11 @@ function HealthCoach() {
           <div className="auth-toggle">
             <button
               className={authMode === "signin" ? "auth-toggle-btn active" : "auth-toggle-btn"}
-              onClick={() => { setAuthMode("signin"); setLoginError(""); }}
+              onClick={() => { setAuthMode("signin"); setLoginError(""); setLoginSuccess(""); }}
             >Sign in</button>
             <button
               className={authMode === "signup" ? "auth-toggle-btn active" : "auth-toggle-btn"}
-              onClick={() => { setAuthMode("signup"); setLoginError(""); }}
+              onClick={() => { setAuthMode("signup"); setLoginError(""); setLoginSuccess(""); }}
             >Create account</button>
           </div>
           <input
@@ -338,6 +353,7 @@ function HealthCoach() {
           >
             {loginLoading ? "Please wait…" : authMode === "signup" ? "Create account →" : "Sign in →"}
           </button>
+          {loginSuccess && <p className="login-success">{loginSuccess}</p>}
           {loginError && <p className="error" style={{ marginTop: 10 }}>{loginError}</p>}
         </div>
       </div>
@@ -379,6 +395,18 @@ function HealthCoach() {
             <div className="progress-bar-bg">
               <div className="progress-bar-fill" style={{ width: `${progressPct}%` }} />
             </div>
+            {profile?.program_route && (
+              <div className="route-label">
+                {{
+                  anxiety: "Anxiety Track",
+                  weight_loss: "Weight Loss Track",
+                  skin: "Skin Health Track",
+                  energy: "Energy Track",
+                  behavioral: "Behavioral Track",
+                  general: "General Wellness Track",
+                }[profile.program_route] ?? "Wellness Track"}
+              </div>
+            )}
           </div>
         )}
 

@@ -11,6 +11,7 @@ class PatientProfile(BaseModel):
     current_habits: List[str] = []
     health_concerns: List[str] = []
     current_day: int = 1
+    program_route: Optional[str] = None
 
 class CheckIn(BaseModel):
     day: int

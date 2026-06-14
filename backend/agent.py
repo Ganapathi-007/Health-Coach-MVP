@@ -9,6 +9,68 @@ load_dotenv()
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 MODEL = "claude-sonnet-4-6"
 
+PROGRAM_ROUTES = {
+    "anxiety": [
+        ("Week 1 (Sleep + Breathing Foundation)",       "sleep quality, breathing habits, and evening wind-down routines"),
+        ("Week 2 (Stress Trigger Mapping)",             "identifying specific stress triggers, emotional patterns, and coping responses"),
+        ("Week 3 (Mindfulness + Movement)",             "daily movement, mindfulness practice, and nervous system regulation"),
+        ("Week 4 (Consistency + Resilience)",           "habit consistency, progress reflection, and building long-term resilience"),
+    ],
+    "weight_loss": [
+        ("Week 1 (Sleep + Metabolism Foundation)",      "sleep quality and how it drives metabolism, hunger hormones, and cravings"),
+        ("Week 2 (Nutrition + Meal Timing)",            "meal timing, food choices, portion awareness, and blood sugar stability"),
+        ("Week 3 (Movement + Daily Activity)",          "daily steps, structured exercise, and non-exercise activity thermogenesis"),
+        ("Week 4 (Habit Stacking + Progress Review)",   "habit consistency, progress wins, and sustainable routine building"),
+    ],
+    "skin": [
+        ("Week 1 (Hydration + Sleep)",                  "daily water intake, sleep quality, and their direct impact on skin health"),
+        ("Week 2 (Diet + Gut Health)",                  "food choices, gut health, and foods that trigger or calm inflammation and acne"),
+        ("Week 3 (Stress + Hormones)",                  "stress levels, hormonal patterns, and how they drive skin flare-ups"),
+        ("Week 4 (Routine + Progress Review)",          "skincare routine consistency, progress tracking, and habit reinforcement"),
+    ],
+    "energy": [
+        ("Week 1 (Sleep Quality Foundation)",           "sleep depth, consistency, and habits that drain or restore energy overnight"),
+        ("Week 2 (Nutrition + Blood Sugar)",            "meal timing, blood sugar stability, caffeine use, and energy crashes"),
+        ("Week 3 (Sunlight + Movement)",                "morning sunlight exposure, daily movement, and their impact on energy and mood"),
+        ("Week 4 (Habit Stacking + Progress Review)",   "energy habit consistency, identifying peak vs. low energy windows, and progress"),
+    ],
+    "behavioral": [
+        ("Week 1 (Trigger Awareness)",                  "identifying the specific triggers, times, emotions, and environments that precede the compulsive behavior"),
+        ("Week 2 (Habit Replacement)",                  "building concrete replacement behaviors, urge surfing techniques, and friction strategies"),
+        ("Week 3 (Dopamine Regulation + Movement)",     "exercise, cold exposure, structured routine, and activities that rebuild healthy dopamine sensitivity"),
+        ("Week 4 (Accountability + Progress Review)",   "streak tracking, honest self-assessment, handling relapses without shame, and building forward momentum"),
+    ],
+    "general": [
+        ("Week 1 (Sleep Foundation + Hydration)",       "sleep quality and daily water intake"),
+        ("Week 2 (Nutrition + Meal Timing)",            "meal timing, food choices, and blood sugar stability"),
+        ("Week 3 (Movement + Stress Management)",       "daily steps, exercise, and stress levels"),
+        ("Week 4 (Habit Stacking + Progress Review)",   "habit consistency, progress, and wins"),
+    ],
+}
+
+
+def detect_program_route(profile: PatientProfile) -> str:
+    concerns = ", ".join(profile.health_concerns) if profile.health_concerns else ""
+    goals = ", ".join(profile.goals) if profile.goals else ""
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=10,
+        system="""You are a health program router. Based on the patient's concerns and goals, pick the single best route.
+Return ONLY one of these exact strings: anxiety, weight_loss, skin, energy, behavioral, general
+Rules:
+- behavioral: compulsive habits, addiction, porn, masturbation, social media overuse, gambling, impulse control
+- anxiety: stress, panic, worry, mental health, burnout, overwhelm
+- weight_loss: weight, fat loss, obesity, BMI, diet
+- skin: acne, eczema, rosacea, skin health, complexion
+- energy: fatigue, tiredness, low energy, brain fog, motivation
+- general: everything else or mixed concerns
+No explanation. Just the one word.""",
+        messages=[{"role": "user", "content": f"Concerns: {concerns}\nGoals: {goals}"}]
+    )
+    route = response.content[0].text.strip().lower()
+    return route if route in PROGRAM_ROUTES else "general"
+
+
 def parse_patient_profile(raw_text: str) -> PatientProfile:
     response = client.messages.create(
         model=MODEL,
@@ -34,18 +96,16 @@ No explanation. No markdown. Just the JSON object.""",
 
 
 def generate_checkin_questions(day: int, profile: PatientProfile, previous_checkins: list) -> list[str]:
+    route = profile.program_route or "general"
+    track = PROGRAM_ROUTES.get(route, PROGRAM_ROUTES["general"])
     if day <= 7:
-        week = "Week 1 (Sleep Foundation + Hydration)"
-        focus = "sleep quality and daily water intake"
+        week, focus = track[0]
     elif day <= 14:
-        week = "Week 2 (Nutrition + Meal Timing)"
-        focus = "meal timing, food choices, and blood sugar stability"
+        week, focus = track[1]
     elif day <= 21:
-        week = "Week 3 (Movement + Stress Management)"
-        focus = "daily steps, exercise, and stress levels"
+        week, focus = track[2]
     else:
-        week = "Week 4 (Habit Stacking + Progress Review)"
-        focus = "habit consistency, progress, and wins"
+        week, focus = track[3]
 
     all_asked = [q for c in previous_checkins for q in c.questions_asked]
     previous_summary = ""

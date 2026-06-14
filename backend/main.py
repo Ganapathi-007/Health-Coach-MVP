@@ -12,7 +12,7 @@ from models import (
     UserSessionRequest,
     Session, CheckIn
 )
-from agent import parse_patient_profile, generate_checkin_questions, answer_from_protocol, generate_coaching_response, generate_progress_summary
+from agent import parse_patient_profile, detect_program_route, generate_checkin_questions, answer_from_protocol, generate_coaching_response, generate_progress_summary
 from pdf_loader import protocol_text
 import memory
 
@@ -34,6 +34,7 @@ def health_check():
 @app.post("/onboard", response_model=OnboardResponse)
 def onboard(request: OnboardRequest):
     profile = parse_patient_profile(request.raw_text)
+    profile.program_route = detect_program_route(profile)
     session_id = str(uuid.uuid4())
     session = Session(session_id=session_id, profile=profile, last_checkin_date=str(date.today()))
     memory.save_session(session, user_id=request.user_id)
