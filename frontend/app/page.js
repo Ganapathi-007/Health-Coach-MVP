@@ -161,6 +161,19 @@ function HealthCoach() {
                   setIntroName(data.profile?.name || "");
                   setIntroScreen("returning");
                 }
+                // Pre-fetch progress in background so tab loads instantly
+                fetch(`${API}/progress`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ session_id: data.session_id }),
+                }).then(r => r.json()).then(p => {
+                  if (p.check_in_count >= 3) {
+                    setProgressSummary(p.summary);
+                    setProgressCount(p.check_in_count);
+                    setProgressHasComparison(p.has_comparison);
+                  }
+                }).catch(() => {});
+
                 if (data.today_checkin) {
                   const { questions_asked = [], user_responses = [], commitment, day } = data.today_checkin;
                   const rebuilt = [];
