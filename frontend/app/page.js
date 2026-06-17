@@ -624,11 +624,6 @@ function HealthCoach() {
                   <button className="btn-secondary" style={{ marginTop: 20 }} onClick={() => setShowOnboardForm(true)}>
                     Update profile
                   </button>
-
-                  <div className="mobile-signout">
-                    <span className="mobile-user-email">{authUser.email}</span>
-                    <button className="btn-logout" onClick={handleLogout}>Sign out</button>
-                  </div>
                 </div>
 
                 <div className="card">
@@ -658,6 +653,11 @@ function HealthCoach() {
                       </div>
                     );
                   })()}
+                </div>
+
+                <div className="mobile-signout">
+                  <span className="mobile-user-email">{authUser.email}</span>
+                  <button className="btn-logout" onClick={handleLogout}>Sign out</button>
                 </div>
               </>
             )}
