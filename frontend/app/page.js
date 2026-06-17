@@ -196,15 +196,17 @@ function HealthCoach() {
               if (attempt < 4) {
                 setBackendError(true);
                 setTimeout(() => loadSession(attempt + 1), 4000);
+                return;
               } else {
-                setBackendError(false); // give up, let them re-onboard or retry manually
+                setBackendError(false);
               }
             }
+            setAuthLoading(false);
           };
           await loadSession();
+        } else {
+          setAuthLoading(false);
         }
-
-        setAuthLoading(false);
       }
     );
 
