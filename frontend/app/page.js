@@ -65,6 +65,7 @@ function HealthCoach() {
 
   const [authUser, setAuthUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [backendError, setBackendError] = useState(false);
   const signingUp = useRef(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -135,21 +136,33 @@ function HealthCoach() {
             "";
           if (googleName) setFormName(googleName);
 
-          // Try to restore existing health coach session
-          try {
-            const res = await fetch(`${API}/auth/me`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ user_id: user.id }),
-            });
-            if (res.ok) {
-              const data = await res.json();
-              setSessionId(data.session_id);
-              setProfile(data.profile);
-              setWelcome(data.welcome_message);
-              setTab("checkin");
+          // Try to restore existing health coach session (with retry for cold starts)
+          const loadSession = async (attempt = 0) => {
+            try {
+              const res = await fetch(`${API}/auth/me`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: user.id }),
+              });
+              if (res.ok) {
+                const data = await res.json();
+                setSessionId(data.session_id);
+                setProfile(data.profile);
+                setWelcome(data.welcome_message);
+                setTab("checkin");
+                setBackendError(false);
+              }
+              // 404 = no session yet (new user), fall through to onboarding normally
+            } catch {
+              if (attempt < 4) {
+                setBackendError(true);
+                setTimeout(() => loadSession(attempt + 1), 4000);
+              } else {
+                setBackendError(false); // give up, let them re-onboard or retry manually
+              }
             }
-          } catch {}
+          };
+          await loadSession();
         }
 
         setAuthLoading(false);
@@ -402,6 +415,19 @@ function HealthCoach() {
         <div className="auth-loading-inner">
           <div className="logo-icon" style={{ margin: "0 auto 16px", width: 48, height: 48, fontSize: 24 }}>🌿</div>
           <p>Loading…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Backend cold start — show reconnecting instead of blank onboarding ──
+  if (backendError) {
+    return (
+      <div className="auth-loading">
+        <div className="auth-loading-inner">
+          <div className="logo-icon" style={{ margin: "0 auto 16px", width: 48, height: 48, fontSize: 24 }}>🌿</div>
+          <p style={{ marginBottom: 8 }}>Reconnecting to your session…</p>
+          <p style={{ fontSize: 13, color: "#888" }}>The server is waking up. This takes about 30 seconds.</p>
         </div>
       </div>
     );
