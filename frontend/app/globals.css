@@ -954,6 +954,11 @@ input[type="number"]:focus {
   padding-left: 62px;
 }
 
+/* ── Mobile sign out (hidden on desktop) ── */
+.mobile-signout {
+  display: none;
+}
+
 /* ── Bottom Nav (mobile only, hidden on desktop) ── */
 .bottom-nav {
   display: none;
@@ -1069,5 +1074,19 @@ input[type="number"]:focus {
 
   .answer-box, .progress-report, .welcome-box {
     font-size: 14px;
+  }
+
+  .mobile-signout {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #e8e2d9;
+  }
+
+  .mobile-user-email {
+    font-size: 12px;
+    color: #999;
   }
 }
