@@ -953,3 +953,112 @@ input[type="number"]:focus {
   line-height: 1.6;
   padding-left: 62px;
 }
+
+/* ── Bottom Nav (mobile only, hidden on desktop) ── */
+.bottom-nav {
+  display: none;
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  color: #6b9a7d;
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 0;
+  transition: color 0.15s;
+}
+
+.bottom-nav-item.active {
+  color: #e8f5ee;
+}
+
+.bottom-nav-item.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.bottom-nav-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #1b3a2d;
+    border-top: 1px solid #2d5a3d;
+    padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
+    z-index: 100;
+  }
+
+  .main {
+    margin-left: 0;
+    padding: 24px 16px 90px;
+    max-width: 100%;
+  }
+
+  .page-header h2 {
+    font-size: 21px;
+  }
+
+  .card {
+    padding: 20px 18px;
+  }
+
+  .profile-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .intake-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-wrapper {
+    height: calc(100vh - 220px);
+  }
+
+  .track-week-focus {
+    padding-left: 0;
+    margin-top: 6px;
+  }
+
+  .track-week-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .btn-primary {
+    width: 100%;
+    text-align: center;
+  }
+
+  .btn-secondary {
+    width: 100%;
+    text-align: center;
+  }
+
+  .login-card {
+    margin: 16px;
+    padding: 36px 24px;
+  }
+
+  .answer-box, .progress-report, .welcome-box {
+    font-size: 14px;
+  }
+}

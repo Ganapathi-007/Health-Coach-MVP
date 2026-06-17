@@ -389,10 +389,10 @@ function HealthCoach() {
   const progressPct = Math.round((currentDay / 30) * 100);
 
   const navItems = [
-    { key: "onboard", icon: "◎", label: "Onboard" },
-    { key: "checkin", icon: "✓", label: "Daily Check-in", requiresSession: true },
-    { key: "progress", icon: "↗", label: "Progress", requiresSession: true },
-    { key: "ask", icon: "?", label: "Ask your coach", requiresSession: true },
+    { key: "onboard", icon: "◎", label: "Onboard", mobileLabel: "Profile" },
+    { key: "checkin", icon: "✓", label: "Daily Check-in", mobileLabel: "Check-in", requiresSession: true },
+    { key: "progress", icon: "↗", label: "Progress", mobileLabel: "Progress", requiresSession: true },
+    { key: "ask", icon: "?", label: "Ask your coach", mobileLabel: "Ask", requiresSession: true },
   ];
 
   // ── Loading auth state ──
@@ -886,6 +886,20 @@ function HealthCoach() {
           </>
         )}
       </main>
+
+      {/* Bottom nav — mobile only */}
+      <nav className="bottom-nav">
+        {navItems.map((item) => (
+          <button
+            key={item.key}
+            className={`bottom-nav-item ${tab === item.key ? "active" : ""} ${item.requiresSession && !sessionId ? "disabled" : ""}`}
+            onClick={() => !(item.requiresSession && !sessionId) && setTab(item.key)}
+          >
+            <span className="bottom-nav-icon">{item.icon}</span>
+            <span>{item.mobileLabel}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
