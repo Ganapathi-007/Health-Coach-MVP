@@ -840,3 +840,116 @@ input[type="number"]:focus {
   color: #aaa;
   margin-top: 12px;
 }
+
+/* ── Secondary button ── */
+.btn-secondary {
+  background: transparent;
+  color: #1b3a2d;
+  border: 1.5px solid #1b3a2d;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-block;
+}
+
+.btn-secondary:hover {
+  background: #1b3a2d;
+  color: #fff;
+}
+
+/* ── Track Roadmap ── */
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.track-name-badge {
+  font-size: 11px;
+  font-weight: 600;
+  background: #eef5f1;
+  color: #3a6347;
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.track-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.track-week {
+  border: 1px solid #e8e2d9;
+  border-radius: 12px;
+  padding: 14px 18px;
+  background: #fafaf8;
+  transition: border-color 0.15s;
+}
+
+.track-week.current {
+  border-color: #4a7c59;
+  background: #eef5f1;
+  box-shadow: 0 0 0 1px #4a7c59;
+}
+
+.track-week.completed {
+  opacity: 0.6;
+}
+
+.track-week-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.track-week-num {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #999;
+  min-width: 52px;
+}
+
+.track-week.current .track-week-num {
+  color: #4a7c59;
+}
+
+.track-week-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  flex: 1;
+}
+
+.track-week-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: #1b3a2d;
+  color: #e8f5ee;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+}
+
+.track-week-badge.done {
+  background: #e8e2d9;
+  color: #888;
+}
+
+.track-week-focus {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.6;
+  padding-left: 62px;
+}

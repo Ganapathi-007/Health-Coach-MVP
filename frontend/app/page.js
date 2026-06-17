@@ -12,6 +12,54 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "placeholder-key"
 );
 
+const TRACK_WEEKS = {
+  anxiety: [
+    { title: "Awareness & Physiology", focus: "Stress response education, baseline mood tracking, diaphragmatic breathing as a daily anchor" },
+    { title: "Pattern Recognition", focus: "Worry journaling, scheduled worry time, thought awareness, values reflection" },
+    { title: "Skill Building", focus: "Thought records, ACT defusion techniques, gratitude journaling, deepening mindfulness" },
+    { title: "Committed Action", focus: "Behavioral activation, personal stress toolkit, relapse prevention plan" },
+  ],
+  weight_loss: [
+    { title: "Baseline & Motivation", focus: "Self-awareness through food monitoring only — no restrictions yet — and intrinsic motivation" },
+    { title: "Habit Architecture", focus: "Environmental design, implementation intentions, the sleep-hunger connection" },
+    { title: "Stress, Emotions & Non-Scale Wins", focus: "Emotional eating patterns, mindful eating, expanding progress beyond the scale" },
+    { title: "Identity & Maintenance", focus: "Identity shift, high-risk situation planning, sustainable life beyond 30 days" },
+  ],
+  skin: [
+    { title: "Reset & Eliminate", focus: "Remove inflammatory inputs, start a skin + food + mood diary, hydration baseline" },
+    { title: "Gut Rebuilding", focus: "Fermented foods, prebiotic vegetables, omega-3 sources, sleep for skin repair" },
+    { title: "Stress & Cortisol", focus: "HPA axis education, daily mindfulness, circadian sleep anchoring, gratitude journaling" },
+    { title: "Personalization & Reintroduction", focus: "Systematic food reintroduction, personal trigger map, long-term habit plan" },
+  ],
+  energy: [
+    { title: "Remove & Measure", focus: "Fixed wake time, sleep diary, caffeine cutoff at 2pm, morning light exposure" },
+    { title: "Circadian Anchoring", focus: "Light management, 12-hour eating window, stimulus control, evening wind-down" },
+    { title: "Nutrition Timing & Movement", focus: "Protein-rich breakfast, morning walk, meal timing to prevent energy crashes" },
+    { title: "Integration & Optimization", focus: "Review energy gains, contingency plans for disruptions, 90-day maintenance" },
+  ],
+  behavioral: [
+    { title: "Trigger Awareness", focus: "Habit loop logging, values clarification, psychoeducation on dopamine and habits" },
+    { title: "Habit Replacement", focus: "Replacement behaviors for each major trigger, urge surfing with the RAIN method" },
+    { title: "Stress Testing", focus: "HALT vulnerability check-in, high-risk situation pre-planning, DBT emotion regulation" },
+    { title: "Accountability & Forward Momentum", focus: "Relapse prevention plan, identity narrative, self-compassion for setbacks" },
+  ],
+  general: [
+    { title: "Sleep Foundation", focus: "Consistent wake time, phone out of bedroom, tiny habits anchored to existing routines" },
+    { title: "Nervous System", focus: "Daily breath practice, evening wind-down, daily stress-shedding ritual" },
+    { title: "Nutrition Foundation", focus: "Add-don't-subtract approach, protein at breakfast, environmental design for healthy defaults" },
+    { title: "Movement & Connection", focus: "3x/week movement, accountability partner, identity-based habit framing" },
+  ],
+};
+
+const TRACK_LABELS = {
+  anxiety: "Anxiety & Stress Track",
+  weight_loss: "Weight Loss Track",
+  skin: "Skin Health Track",
+  energy: "Energy & Sleep Track",
+  behavioral: "Behavioral Change Track",
+  general: "General Wellness Track",
+};
+
 function HealthCoach() {
   const router = useRouter();
 
@@ -37,6 +85,8 @@ function HealthCoach() {
   const [formHeight, setFormHeight] = useState("");
   const [formConcerns, setFormConcerns] = useState("");
   const [welcome, setWelcome] = useState("");
+
+  const [showOnboardForm, setShowOnboardForm] = useState(false);
 
   const [checkinDay, setCheckinDay] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -216,6 +266,7 @@ function HealthCoach() {
       setSessionId(data.session_id);
       setProfile(data.profile);
       setWelcome(data.welcome_message);
+      setShowOnboardForm(false);
       setTab("checkin");
     } catch {
       setError("Could not reach the backend. Make sure uvicorn is running on port 8000.");
@@ -518,118 +569,179 @@ function HealthCoach() {
 
         {tab === "onboard" && (
           <>
-            <div className="page-header">
-              <h2>Welcome — let's get started</h2>
-              <p>Tell me about yourself and I'll build your personalized 30-day plan.</p>
-            </div>
-
-            <div className="card">
-              <div className="card-title">About you</div>
-              <div className="intake-grid">
-                <div className="intake-field">
-                  <label>Name</label>
-                  <input
-                    type="text"
-                    placeholder="Your name"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                  />
-                </div>
-                <div className="intake-field">
-                  <label>Age</label>
-                  <input
-                    type="number"
-                    placeholder="Years"
-                    value={formAge}
-                    onChange={(e) => setFormAge(e.target.value)}
-                  />
-                </div>
-                <div className="intake-field">
-                  <label>Weight</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 70 kg"
-                    value={formWeight}
-                    onChange={(e) => setFormWeight(e.target.value)}
-                  />
-                </div>
-                <div className="intake-field">
-                  <label>Height</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 175 cm"
-                    value={formHeight}
-                    onChange={(e) => setFormHeight(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="intake-field" style={{ marginTop: 20 }}>
-                <label>What brings you here?</label>
-                <textarea
-                  placeholder="Your health goals, concerns, current habits, sleep schedule — anything on your mind. The more you share, the better I can personalize your program."
-                  value={formConcerns}
-                  onChange={(e) => setFormConcerns(e.target.value)}
-                />
-              </div>
-              <button
-                className="btn-primary"
-                onClick={handleOnboard}
-                disabled={loading || !formConcerns.trim()}
-              >
-                {loading ? "Setting up your profile…" : "Start my 30-day program →"}
-              </button>
-              {error && <p className="error">{error}</p>}
-              {welcome && <div className="welcome-box">{welcome}</div>}
-            </div>
-
-            {profile && (
-              <div className="card">
-                <div className="card-title">Your profile</div>
-                <div className="profile-grid">
-                  <div className="profile-stat">
-                    <div className="stat-label">Name</div>
-                    <div className="stat-value">{profile.name ?? "—"}</div>
-                  </div>
-                  <div className="profile-stat">
-                    <div className="stat-label">Age</div>
-                    <div className="stat-value">{profile.age ?? "—"}</div>
-                  </div>
-                  <div className="profile-stat">
-                    <div className="stat-label">Weight</div>
-                    <div className="stat-value">{profile.weight ?? "—"}</div>
-                  </div>
-                  <div className="profile-stat">
-                    <div className="stat-label">Height</div>
-                    <div className="stat-value">{profile.height ?? "—"}</div>
-                  </div>
-                  <div className="profile-stat">
-                    <div className="stat-label">Sleep</div>
-                    <div className="stat-value">{profile.sleep_hours ? `${profile.sleep_hours} hrs` : "—"}</div>
-                  </div>
-                  <div className="profile-stat">
-                    <div className="stat-label">Day</div>
-                    <div className="stat-value">{profile.current_day} / 30</div>
-                  </div>
+            {/* ── Already onboarded: show profile + track roadmap ── */}
+            {profile && !showOnboardForm && (
+              <>
+                <div className="page-header">
+                  <h2>Welcome back{profile.name ? `, ${profile.name}` : ""}.</h2>
+                  <p>Your 30-day program is active — Day {currentDay} of 30.</p>
                 </div>
 
-                {profile.goals?.length > 0 && (
-                  <div className="profile-stat" style={{ marginTop: 16 }}>
-                    <div className="stat-label">Goals</div>
-                    <div className="tag-list">
-                      {profile.goals.map((g, i) => <span key={i} className="tag">{g}</span>)}
+                <div className="card">
+                  <div className="card-title">Your profile</div>
+                  <div className="profile-grid">
+                    <div className="profile-stat">
+                      <div className="stat-label">Name</div>
+                      <div className="stat-value">{profile.name ?? "—"}</div>
+                    </div>
+                    <div className="profile-stat">
+                      <div className="stat-label">Age</div>
+                      <div className="stat-value">{profile.age ?? "—"}</div>
+                    </div>
+                    <div className="profile-stat">
+                      <div className="stat-label">Weight</div>
+                      <div className="stat-value">{profile.weight ?? "—"}</div>
+                    </div>
+                    <div className="profile-stat">
+                      <div className="stat-label">Height</div>
+                      <div className="stat-value">{profile.height ?? "—"}</div>
+                    </div>
+                    <div className="profile-stat">
+                      <div className="stat-label">Sleep</div>
+                      <div className="stat-value">{profile.sleep_hours ? `${profile.sleep_hours} hrs` : "—"}</div>
+                    </div>
+                    <div className="profile-stat">
+                      <div className="stat-label">Day</div>
+                      <div className="stat-value">{profile.current_day} / 30</div>
                     </div>
                   </div>
+
+                  {profile.goals?.length > 0 && (
+                    <div className="profile-stat" style={{ marginTop: 16 }}>
+                      <div className="stat-label">Goals</div>
+                      <div className="tag-list">
+                        {profile.goals.map((g, i) => <span key={i} className="tag">{g}</span>)}
+                      </div>
+                    </div>
+                  )}
+
+                  {profile.current_habits?.length > 0 && (
+                    <div className="profile-stat" style={{ marginTop: 12 }}>
+                      <div className="stat-label">Current habits</div>
+                      <div className="tag-list">
+                        {profile.current_habits.map((h, i) => <span key={i} className="tag">{h}</span>)}
+                      </div>
+                    </div>
+                  )}
+
+                  <button className="btn-secondary" style={{ marginTop: 20 }} onClick={() => setShowOnboardForm(true)}>
+                    Update profile
+                  </button>
+                </div>
+
+                <div className="card">
+                  <div className="card-title">
+                    Your 30-day roadmap
+                    {profile.program_route && (
+                      <span className="track-name-badge">{TRACK_LABELS[profile.program_route] ?? "Wellness Track"}</span>
+                    )}
+                  </div>
+                  {(() => {
+                    const route = profile.program_route || "general";
+                    const weeks = TRACK_WEEKS[route] || TRACK_WEEKS.general;
+                    const currentWeekIdx = Math.min(Math.floor((currentDay - 1) / 7), 3);
+                    return (
+                      <div className="track-overview">
+                        {weeks.map((week, i) => (
+                          <div key={i} className={`track-week${i === currentWeekIdx ? " current" : i < currentWeekIdx ? " completed" : ""}`}>
+                            <div className="track-week-header">
+                              <span className="track-week-num">Week {i + 1}</span>
+                              <span className="track-week-title">{week.title}</span>
+                              {i === currentWeekIdx && <span className="track-week-badge">You are here</span>}
+                              {i < currentWeekIdx && <span className="track-week-badge done">✓ Done</span>}
+                            </div>
+                            <div className="track-week-focus">{week.focus}</div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </>
+            )}
+
+            {/* ── Not yet onboarded or updating profile ── */}
+            {(!profile || showOnboardForm) && (
+              <>
+                <div className="page-header">
+                  {showOnboardForm ? (
+                    <>
+                      <h2>Update your profile</h2>
+                      <p>Your answers will rebuild your personalized 30-day plan.</p>
+                    </>
+                  ) : (
+                    <>
+                      <h2>Welcome — let's get started</h2>
+                      <p>Tell me about yourself and I'll build your personalized 30-day plan.</p>
+                    </>
+                  )}
+                </div>
+
+                {showOnboardForm && (
+                  <button className="btn-secondary" style={{ marginBottom: 16 }} onClick={() => setShowOnboardForm(false)}>
+                    ← Back to profile
+                  </button>
                 )}
 
-                {profile.current_habits?.length > 0 && (
-                  <div className="profile-stat" style={{ marginTop: 12 }}>
-                    <div className="stat-label">Current habits</div>
-                    <div className="tag-list">
-                      {profile.current_habits.map((h, i) => <span key={i} className="tag">{h}</span>)}
+                <div className="card">
+                  <div className="card-title">About you</div>
+                  <div className="intake-grid">
+                    <div className="intake-field">
+                      <label>Name</label>
+                      <input
+                        type="text"
+                        placeholder="Your name"
+                        value={formName}
+                        onChange={(e) => setFormName(e.target.value)}
+                      />
+                    </div>
+                    <div className="intake-field">
+                      <label>Age</label>
+                      <input
+                        type="number"
+                        placeholder="Years"
+                        value={formAge}
+                        onChange={(e) => setFormAge(e.target.value)}
+                      />
+                    </div>
+                    <div className="intake-field">
+                      <label>Weight</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 70 kg"
+                        value={formWeight}
+                        onChange={(e) => setFormWeight(e.target.value)}
+                      />
+                    </div>
+                    <div className="intake-field">
+                      <label>Height</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 175 cm"
+                        value={formHeight}
+                        onChange={(e) => setFormHeight(e.target.value)}
+                      />
                     </div>
                   </div>
-                )}
-              </div>
+                  <div className="intake-field" style={{ marginTop: 20 }}>
+                    <label>What brings you here?</label>
+                    <textarea
+                      placeholder="Your health goals, concerns, current habits, sleep schedule — anything on your mind. The more you share, the better I can personalize your program."
+                      value={formConcerns}
+                      onChange={(e) => setFormConcerns(e.target.value)}
+                    />
+                  </div>
+                  <button
+                    className="btn-primary"
+                    onClick={handleOnboard}
+                    disabled={loading || !formConcerns.trim()}
+                  >
+                    {loading ? "Setting up your profile…" : showOnboardForm ? "Update my program →" : "Start my 30-day program →"}
+                  </button>
+                  {error && <p className="error">{error}</p>}
+                  {welcome && <div className="welcome-box">{welcome}</div>}
+                </div>
+              </>
             )}
           </>
         )}
