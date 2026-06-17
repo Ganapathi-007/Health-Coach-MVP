@@ -156,7 +156,6 @@ function HealthCoach() {
                 const name = data.profile?.name || "";
                 setIntroName(name);
                 setIntroScreen("returning");
-                setTimeout(() => setIntroScreen(null), 2500);
               } else if (res.status === 404) {
                 // new user — show intro before onboarding
                 setIntroScreen("new");
@@ -466,6 +465,9 @@ function HealthCoach() {
             <div className="intro-text">
               <h2>Welcome back{introName ? `, ${introName}` : ""}.</h2>
               <p>Ready for today's check-in?</p>
+              <button className="intro-btn" onClick={() => setIntroScreen(null)}>
+                YES!
+              </button>
             </div>
           )}
         </div>
