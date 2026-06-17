@@ -65,9 +65,10 @@ def get_my_session(request: UserSessionRequest):
     today_checkin = None
     today = str(date.today())
     if session.last_checkin_date == today and session.check_ins:
-        last = session.check_ins[-1]
-        if last.user_responses:
-            today_checkin = last
+        for checkin in reversed(session.check_ins):
+            if checkin.user_responses:
+                today_checkin = checkin
+                break
 
     return OnboardResponse(
         session_id=session.session_id,
