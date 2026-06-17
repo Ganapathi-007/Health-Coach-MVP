@@ -991,6 +991,15 @@ input[type="number"]:focus {
 
 /* ── Mobile ── */
 @media (max-width: 768px) {
+  body {
+    background: #f0ece4;
+  }
+
+  .app {
+    background: #f0ece4;
+    min-height: 100vh;
+  }
+
   .sidebar {
     display: none;
   }
