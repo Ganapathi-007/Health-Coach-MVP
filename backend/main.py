@@ -6,13 +6,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from models import (
     OnboardRequest, OnboardResponse,
     CheckInRequest, CheckInResponse,
+    CheckInStartResponse, TurnRequest, TurnResponse,
     AskRequest, AskResponse,
     RespondRequest, RespondResponse,
     ProgressRequest, ProgressResponse,
     UserSessionRequest,
     Session, CheckIn
 )
-from agent import parse_patient_profile, detect_program_route, generate_checkin_questions, answer_from_protocol, generate_coaching_response, extract_commitment, generate_progress_summary, TRACK_PROTOCOLS
+from agent import (
+    parse_patient_profile, detect_program_route,
+    generate_checkin_questions, answer_from_protocol,
+    generate_coaching_response, extract_commitment,
+    generate_progress_summary, TRACK_PROTOCOLS,
+    generate_coach_opening, generate_coach_turn,
+)
 import memory
 
 app = FastAPI(title="Health Coach API")
@@ -85,6 +92,58 @@ def checkin(request: CheckInRequest):
     memory.update_session(session)
 
     return CheckInResponse(day=day, questions=questions, missed_days=missed_days)
+
+
+@app.post("/checkin/start", response_model=CheckInStartResponse)
+def checkin_start(request: CheckInRequest):
+    session = memory.get_session(request.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    today = str(date.today())
+    missed_days = 0
+
+    if session.last_checkin_date and session.last_checkin_date != today:
+        last_date = date.fromisoformat(session.last_checkin_date)
+        gap = (date.today() - last_date).days
+        missed_days = max(0, gap - 1)
+        session.profile.current_day += 1
+        session.last_checkin_date = today
+
+    day = session.profile.current_day
+    opening = generate_coach_opening(day, session.profile, session.check_ins)
+
+    new_checkin = CheckIn(day=day, questions_asked=[opening])
+    session.check_ins.append(new_checkin)
+    memory.update_session(session)
+
+    return CheckInStartResponse(day=day, opening=opening, missed_days=missed_days)
+
+
+@app.post("/checkin/turn", response_model=TurnResponse)
+def checkin_turn(request: TurnRequest):
+    session = memory.get_session(request.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    day = session.profile.current_day
+    history = [{"role": t.role, "text": t.text} for t in request.history]
+    result = generate_coach_turn(day, session.profile, history)
+
+    if result["is_final"] and session.check_ins:
+        coach_msgs = [t.text for t in request.history if t.role == "coach"] + [result["message"]]
+        user_msgs = [t.text for t in request.history if t.role == "user"]
+        session.check_ins[-1].questions_asked = coach_msgs
+        session.check_ins[-1].user_responses = user_msgs
+        session.check_ins[-1].commitment = result["commitment"]
+        memory.update_session(session)
+
+    return TurnResponse(
+        reply=result["message"],
+        is_final=result["is_final"],
+        commitment=result["commitment"],
+        new_day=day,
+    )
 
 
 @app.post("/checkin/respond", response_model=RespondResponse)

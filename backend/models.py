@@ -45,6 +45,25 @@ class CheckInResponse(BaseModel):
     questions: List[str]
     missed_days: int = 0
 
+class CheckInStartResponse(BaseModel):
+    day: int
+    opening: str
+    missed_days: int = 0
+
+class ConversationMessage(BaseModel):
+    role: str  # "coach" or "user"
+    text: str
+
+class TurnRequest(BaseModel):
+    session_id: str
+    history: List[ConversationMessage]
+
+class TurnResponse(BaseModel):
+    reply: str
+    is_final: bool
+    commitment: Optional[str] = None
+    new_day: int
+
 class AskRequest(BaseModel):
     session_id: str
     question: str

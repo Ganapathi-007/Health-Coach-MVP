@@ -89,12 +89,10 @@ function HealthCoach() {
   const [showOnboardForm, setShowOnboardForm] = useState(false);
 
   const [checkinDay, setCheckinDay] = useState(null);
-  const [questions, setQuestions] = useState([]);
   const [checkinPhase, setCheckinPhase] = useState("idle");
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
-  const [currentQ, setCurrentQ] = useState(0);
-  const [answers, setAnswers] = useState([]);
+  const [conversationHistory, setConversationHistory] = useState([]);
 
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
@@ -279,29 +277,28 @@ function HealthCoach() {
     setLoading(true);
     setError("");
     setMessages([]);
-    setAnswers([]);
-    setCurrentQ(0);
+    setConversationHistory([]);
     setChatInput("");
     setCheckinPhase("idle");
     try {
-      const res = await fetch(`${API}/checkin`, {
+      const res = await fetch(`${API}/checkin/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: sessionId }),
       });
       const data = await res.json();
       setCheckinDay(data.day);
-      setQuestions(data.questions);
+
       const initialMessages = [];
       if (data.missed_days >= 1) {
         const missedText = data.missed_days === 1
-          ? "You missed yesterday's check-in. Consistency is what makes this work — one missed day is fine, but make it the exception. Let's get back on track."
-          : `You've been away for ${data.missed_days} days. That's a gap worth noticing. Daily check-ins are what build momentum — let's not lose what you've started.`;
+          ? "You missed yesterday's check-in. Consistency is what makes this work — one missed day is fine, but make it the exception."
+          : `You've been away for ${data.missed_days} days. Daily check-ins are what build momentum — let's get back on track.`;
         initialMessages.push({ role: "coach", text: missedText });
       }
-      initialMessages.push({ role: "coach", text: data.questions[0] });
+      initialMessages.push({ role: "coach", text: data.opening });
       setMessages(initialMessages);
-      setCurrentQ(0);
+      setConversationHistory([{ role: "coach", text: data.opening }]);
       setCheckinPhase("chatting");
     } catch {
       setError("Could not reach the backend.");
@@ -314,38 +311,38 @@ function HealthCoach() {
 
     const userText = chatInput.trim();
     setChatInput("");
-    const updatedAnswers = [...answers, userText];
-    setAnswers(updatedAnswers);
+
+    const updatedHistory = [...conversationHistory, { role: "user", text: userText }];
+    setConversationHistory(updatedHistory);
     setMessages(prev => [...prev, { role: "user", text: userText }]);
 
-    const nextQ = currentQ + 1;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/checkin/turn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId, history: updatedHistory }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "API error");
 
-    if (nextQ < questions.length) {
-      setCurrentQ(nextQ);
-      setTimeout(() => {
-        setMessages(prev => [...prev, { role: "coach", text: questions[nextQ] }]);
-      }, 400);
-    } else {
-      setLoading(true);
-      setTimeout(async () => {
-        try {
-          const res = await fetch(`${API}/checkin/respond`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ session_id: sessionId, questions, responses: updatedAnswers }),
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.detail || "API error");
-          setMessages(prev => [...prev, { role: "coach", text: data.coaching, feedback: true, commitment: data.commitment }]);
-          setProfile(prev => prev ? { ...prev, current_day: data.new_day } : prev);
-          setCheckinPhase("done");
-        } catch (e) {
-          setError(`Could not get coach feedback: ${e.message}`);
-          setCheckinPhase("done");
-        }
-        setLoading(false);
-      }, 400);
+      const newHistory = [...updatedHistory, { role: "coach", text: data.reply }];
+      setConversationHistory(newHistory);
+      setMessages(prev => [...prev, {
+        role: "coach",
+        text: data.reply,
+        feedback: data.is_final,
+        commitment: data.commitment,
+      }]);
+
+      if (data.is_final) {
+        setProfile(prev => prev ? { ...prev, current_day: data.new_day } : prev);
+        setCheckinPhase("done");
+      }
+    } catch (e) {
+      setError(`Could not get coach response: ${e.message}`);
     }
+    setLoading(false);
   }
 
   async function handleProgress() {
@@ -813,12 +810,7 @@ function HealthCoach() {
                   )}
 
                   {checkinPhase === "done" && (
-                    <>
-                      <p className="chat-done-note">Check back tomorrow for Day {(checkinDay || 1) + 1}.</p>
-                      <button className="btn-primary" onClick={handleCheckin} style={{ marginTop: 12 }}>
-                        Get more questions
-                      </button>
-                    </>
+                    <p className="chat-done-note">Session complete. Check back tomorrow for Day {(checkinDay || 1) + 1}.</p>
                   )}
                 </div>
               )}

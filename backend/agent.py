@@ -586,6 +586,122 @@ def _get_week_data(day: int, route: str) -> dict:
         return track[3]
 
 
+def generate_coach_opening(day: int, profile: PatientProfile, previous_checkins: list) -> str:
+    route = profile.program_route or "general"
+    week_data = _get_week_data(day, route)
+    week_name = week_data["name"]
+    focus = week_data["focus"]
+    guardrails = TRACK_GUARDRAILS.get(route, TRACK_GUARDRAILS["general"])
+
+    name = profile.name or ""
+
+    last_commitment = ""
+    last_ci = next((c for c in reversed(previous_checkins) if c.commitment), None)
+    if last_ci:
+        last_commitment = f'\nLast commitment they made: "{last_ci.commitment}" — open by checking in on this specifically.'
+
+    recent_context = ""
+    if previous_checkins and previous_checkins[-1].user_responses:
+        snippets = previous_checkins[-1].user_responses[:2]
+        recent_context = f"\nWhat they shared last session: {'; '.join(snippets)}"
+
+    system = f"""You are a wellness coach opening a daily check-in with your client.
+
+{guardrails}
+
+Client: {name or 'your client'} | Day {day} of 30 | This week: {week_name}
+Week focus: {focus}{last_commitment}{recent_context}
+
+Write the opening message for today's check-in.
+Rules:
+- If there is a recent commitment, open by naming it explicitly and asking how it went
+- Otherwise open with something specific to where they are in the program
+- Warm but direct — no filler, never say "How are you today?" or "How's it going?"
+- End with ONE specific question that kicks off the real conversation
+- 2-3 sentences total. No bullet points. Conversational tone."""
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=200,
+        system=system,
+        messages=[{"role": "user", "content": "Open the check-in."}]
+    )
+    return response.content[0].text.strip()
+
+
+def generate_coach_turn(day: int, profile: PatientProfile, conversation_history: list) -> dict:
+    """
+    conversation_history: list of {"role": "coach"|"user", "text": str}
+    The last entry must be a user message.
+    Returns: {"message": str, "is_final": bool, "commitment": str|None}
+    """
+    route = profile.program_route or "general"
+    week_data = _get_week_data(day, route)
+    focus = week_data["focus"]
+    framework = week_data["framework"]
+    guardrails = TRACK_GUARDRAILS.get(route, TRACK_GUARDRAILS["general"])
+
+    techniques_text = "\n".join(f"- {t.split(':')[0].strip()}" for t in week_data["techniques"])
+
+    user_turns = sum(1 for t in conversation_history if t["role"] == "user")
+
+    if user_turns >= 7:
+        wrap_up_instruction = "\nYou MUST wrap up this session now — it has gone on long enough. Give your closing insight and commitment, then end with [END_SESSION]."
+    elif user_turns >= 5:
+        wrap_up_instruction = "\nYou've covered good ground. If the main topics have been touched, it's a good time to close naturally."
+    else:
+        wrap_up_instruction = ""
+
+    system = f"""You are a warm, direct wellness coach conducting a real daily check-in conversation.
+
+{guardrails}
+
+CLIENT: {profile.name or 'your client'} | Day {day} of 30 | Track: {route} | Framework: {framework}
+This week's focus: {focus}
+
+TOPICS TO WEAVE IN (not a checklist — bring them in naturally as the conversation allows):
+{techniques_text}
+
+HOW TO CONDUCT THIS CONVERSATION:
+1. Always respond to what the client just said before steering anywhere new
+2. If they share a struggle, a win, or something emotionally significant — follow up on it; don't rush past it
+3. Once you've acknowledged their answer, steer naturally toward an uncovered topic when the moment is right
+4. Keep replies short: 2-4 sentences + ONE question. Never fire multiple questions at once.
+5. Sound like a real coach — warm, curious, direct. No filler words ("great!", "absolutely!", "of course!")
+
+WHEN TO END:
+- When you've covered the main topics and the conversation feels naturally complete (usually after 4-6 user exchanges)
+- Close organically — don't announce "let's wrap up"
+- Final message structure: 2-3 sentences of specific coaching insight based on what they actually shared → specific commitment starting with "For tomorrow:" → then on the very last line write exactly: [END_SESSION]
+{wrap_up_instruction}"""
+
+    messages = []
+    for turn in conversation_history:
+        role = "assistant" if turn["role"] == "coach" else "user"
+        messages.append({"role": role, "content": turn["text"]})
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=400,
+        system=system,
+        messages=messages
+    )
+
+    reply = response.content[0].text.strip()
+    is_final = "[END_SESSION]" in reply
+    clean_reply = reply.replace("[END_SESSION]", "").strip()
+
+    commitment = None
+    if is_final:
+        commitment = extract_commitment(clean_reply)
+
+    return {
+        "message": clean_reply,
+        "is_final": is_final,
+        "commitment": commitment,
+    }
+
+
 def detect_program_route(profile: PatientProfile) -> str:
     concerns = ", ".join(profile.health_concerns) if profile.health_concerns else ""
     goals = ", ".join(profile.goals) if profile.goals else ""
