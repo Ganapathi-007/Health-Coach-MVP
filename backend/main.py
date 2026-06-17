@@ -12,8 +12,7 @@ from models import (
     UserSessionRequest,
     Session, CheckIn
 )
-from agent import parse_patient_profile, detect_program_route, generate_checkin_questions, answer_from_protocol, generate_coaching_response, extract_commitment, generate_progress_summary
-from pdf_loader import protocol_text
+from agent import parse_patient_profile, detect_program_route, generate_checkin_questions, answer_from_protocol, generate_coaching_response, extract_commitment, generate_progress_summary, TRACK_PROTOCOLS
 import memory
 
 app = FastAPI(title="Health Coach API")
@@ -140,5 +139,6 @@ def ask(request: AskRequest):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    answer = answer_from_protocol(request.question, protocol_text, session.profile)
+    track_protocol = TRACK_PROTOCOLS.get(session.profile.program_route or "general", TRACK_PROTOCOLS["general"])
+    answer = answer_from_protocol(request.question, track_protocol, session.profile)
     return AskResponse(answer=answer)
