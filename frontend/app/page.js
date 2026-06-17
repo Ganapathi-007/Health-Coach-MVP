@@ -133,6 +133,7 @@ function HealthCoach() {
         setAuthUser(user);
 
         if (user && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
+          if (event === "SIGNED_IN") setAuthLoading(true);
           // Pre-fill name from Google profile
           const googleName =
             user.user_metadata?.full_name ||
