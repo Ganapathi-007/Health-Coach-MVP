@@ -449,7 +449,7 @@ function HealthCoach() {
   // ── Intro animation screen ──
   if (introScreen) {
     return (
-      <div className={`intro-screen${introFading ? " intro-screen-out" : ""}`}
+      <div className={`intro-screen${introFading ? " intro-screen-out" : ""}`}>
         <div className="intro-inner">
           <img src="/coach.png" alt="Aadya" className="intro-photo" />
           {introScreen === "new" ? (
