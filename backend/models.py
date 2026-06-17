@@ -24,6 +24,7 @@ class Session(BaseModel):
     profile: PatientProfile
     check_ins: List[CheckIn] = []
     last_checkin_date: Optional[str] = None
+    client_summary: Optional[str] = None
 
 class OnboardRequest(BaseModel):
     raw_text: str

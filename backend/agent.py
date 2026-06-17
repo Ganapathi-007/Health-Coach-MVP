@@ -586,7 +586,59 @@ def _get_week_data(day: int, route: str) -> dict:
         return track[3]
 
 
-def generate_coach_opening(day: int, profile: PatientProfile, previous_checkins: list) -> str:
+def update_client_summary(profile: PatientProfile, existing_summary: str, completed_checkins: list) -> str:
+    latest = completed_checkins[-1] if completed_checkins else None
+    latest_text = ""
+    if latest:
+        pairs = "\n".join([f"  Coach: {q}\n  User: {r}" for q, r in zip(latest.questions_asked, latest.user_responses)])
+        commitment_text = f"\n  Commitment made: \"{latest.commitment}\"" if latest.commitment else ""
+        latest_text = f"\n\nLATEST SESSION (Day {latest.day}):\n{pairs}{commitment_text}"
+
+    system = """You are updating a compact client profile for a wellness coach.
+
+Capture everything specific and important about this client:
+- Personal details they have shared (schedule, living situation, habits, triggers)
+- What they are consistently struggling with — be specific, use their own words
+- What is working or improving
+- Commitments made and whether they were kept
+- Any recurring patterns or themes across sessions
+
+Rules:
+- Be specific — use the client's actual details and their own words, not generic summaries
+- Write in third person ("The client...")
+- Update or replace old info that is no longer relevant, keep what still is
+- Keep it concise but do not drop specific details to save space — specifics are the point
+- If this is session 1, just capture what you know from this session"""
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=300,
+        system=system,
+        messages=[{"role": "user", "content": f"EXISTING PROFILE:\n{existing_summary or '(none yet)'}{latest_text}\n\nUpdate the profile."}]
+    )
+    return response.content[0].text.strip()
+
+
+def _build_memory_context(client_summary: str, previous_checkins: list) -> str:
+    parts = []
+    if client_summary:
+        parts.append(f"CLIENT PROFILE (synthesized from all previous sessions):\n{client_summary}")
+    if previous_checkins:
+        completed = [c for c in previous_checkins if c.user_responses]
+        recent = completed[-3:]
+        if recent:
+            lines = []
+            for c in recent:
+                pairs = "\n".join([f"  Coach: {q}\n  User: {r}" for q, r in zip(c.questions_asked, c.user_responses)])
+                commitment_text = f"\n  Commitment: \"{c.commitment}\"" if c.commitment else ""
+                lines.append(f"Day {c.day}:\n{pairs}{commitment_text}")
+            parts.append("RECENT SESSIONS VERBATIM (last 3):\n" + "\n\n".join(lines))
+    if parts:
+        return "\n\n" + "\n\n".join(parts) + "\n\nDo NOT re-ask anything the client has already answered above."
+    return ""
+
+
+def generate_coach_opening(day: int, profile: PatientProfile, previous_checkins: list, client_summary: str = None) -> str:
     route = profile.program_route or "general"
     week_data = _get_week_data(day, route)
     week_name = week_data["name"]
@@ -594,29 +646,25 @@ def generate_coach_opening(day: int, profile: PatientProfile, previous_checkins:
     guardrails = TRACK_GUARDRAILS.get(route, TRACK_GUARDRAILS["general"])
 
     name = profile.name or ""
+    memory_context = _build_memory_context(client_summary, previous_checkins)
 
     last_commitment = ""
     last_ci = next((c for c in reversed(previous_checkins) if c.commitment), None)
     if last_ci:
-        last_commitment = f'\nLast commitment they made: "{last_ci.commitment}" — open by checking in on this specifically.'
-
-    recent_context = ""
-    if previous_checkins and previous_checkins[-1].user_responses:
-        snippets = previous_checkins[-1].user_responses[:2]
-        recent_context = f"\nWhat they shared last session: {'; '.join(snippets)}"
+        last_commitment = f'\nMost recent commitment: "{last_ci.commitment}" — open by checking in on this by name.'
 
     system = f"""You are a wellness coach opening a daily check-in with your client.
 
 {guardrails}
 
 Client: {name or 'your client'} | Day {day} of 30 | This week: {week_name}
-Week focus: {focus}{last_commitment}{recent_context}
+Week focus: {focus}{last_commitment}{memory_context}
 
 Write the opening message for today's check-in.
 Rules:
 - If there is a recent commitment, open by naming it explicitly and asking how it went
-- Otherwise open with something specific to where they are in the program
-- Warm but direct — no filler, never say "How are you today?" or "How's it going?"
+- Otherwise reference something specific from their history — a pattern, a struggle, a win
+- Warm but direct — never say "How are you today?" or "How's it going?"
 - End with ONE specific question that kicks off the real conversation
 - 2-3 sentences total. No bullet points. Conversational tone."""
 
@@ -629,7 +677,7 @@ Rules:
     return response.content[0].text.strip()
 
 
-def generate_coach_turn(day: int, profile: PatientProfile, conversation_history: list) -> dict:
+def generate_coach_turn(day: int, profile: PatientProfile, conversation_history: list, previous_checkins: list = None, client_summary: str = None) -> dict:
     """
     conversation_history: list of {"role": "coach"|"user", "text": str}
     The last entry must be a user message.
@@ -642,13 +690,14 @@ def generate_coach_turn(day: int, profile: PatientProfile, conversation_history:
     guardrails = TRACK_GUARDRAILS.get(route, TRACK_GUARDRAILS["general"])
 
     techniques_text = "\n".join(f"- {t.split(':')[0].strip()}" for t in week_data["techniques"])
+    memory_context = _build_memory_context(client_summary, previous_checkins)
 
     system = f"""You are a warm, direct wellness coach conducting a real daily check-in conversation.
 
 {guardrails}
 
 CLIENT: {profile.name or 'your client'} | Day {day} of 30 | Track: {route} | Framework: {framework}
-This week's focus: {focus}
+This week's focus: {focus}{memory_context}
 
 TOPICS TO WEAVE IN (not a checklist — bring them in naturally as the conversation allows):
 {techniques_text}

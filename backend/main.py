@@ -18,7 +18,7 @@ from agent import (
     generate_checkin_questions, answer_from_protocol,
     generate_coaching_response, extract_commitment,
     generate_progress_summary, TRACK_PROTOCOLS,
-    generate_coach_opening, generate_coach_turn,
+    generate_coach_opening, generate_coach_turn, update_client_summary,
 )
 import memory
 
@@ -111,7 +111,7 @@ def checkin_start(request: CheckInRequest):
         session.last_checkin_date = today
 
     day = session.profile.current_day
-    opening = generate_coach_opening(day, session.profile, session.check_ins)
+    opening = generate_coach_opening(day, session.profile, session.check_ins, session.client_summary)
 
     new_checkin = CheckIn(day=day, questions_asked=[opening])
     session.check_ins.append(new_checkin)
@@ -128,7 +128,7 @@ def checkin_turn(request: TurnRequest):
 
     day = session.profile.current_day
     history = [{"role": t.role, "text": t.text} for t in request.history]
-    result = generate_coach_turn(day, session.profile, history)
+    result = generate_coach_turn(day, session.profile, history, session.check_ins, session.client_summary)
 
     if result["is_final"] and session.check_ins:
         coach_msgs = [t.text for t in request.history if t.role == "coach"] + [result["message"]]
@@ -136,6 +136,9 @@ def checkin_turn(request: TurnRequest):
         session.check_ins[-1].questions_asked = coach_msgs
         session.check_ins[-1].user_responses = user_msgs
         session.check_ins[-1].commitment = result["commitment"]
+        session.client_summary = update_client_summary(
+            session.profile, session.client_summary or "", session.check_ins
+        )
         memory.update_session(session)
 
     return TurnResponse(
