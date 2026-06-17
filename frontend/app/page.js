@@ -66,6 +66,8 @@ function HealthCoach() {
   const [authUser, setAuthUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [backendError, setBackendError] = useState(false);
+  const [introScreen, setIntroScreen] = useState(null); // null | "new" | "returning"
+  const [introName, setIntroName] = useState("");
   const signingUp = useRef(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -151,8 +153,14 @@ function HealthCoach() {
                 setWelcome(data.welcome_message);
                 setTab("checkin");
                 setBackendError(false);
+                const name = data.profile?.name || "";
+                setIntroName(name);
+                setIntroScreen("returning");
+                setTimeout(() => setIntroScreen(null), 2500);
+              } else if (res.status === 404) {
+                // new user — show intro before onboarding
+                setIntroScreen("new");
               }
-              // 404 = no session yet (new user), fall through to onboarding normally
             } catch {
               if (attempt < 4) {
                 setBackendError(true);
@@ -428,6 +436,38 @@ function HealthCoach() {
           <div className="logo-icon" style={{ margin: "0 auto 16px", width: 48, height: 48, fontSize: 24 }}>🌿</div>
           <p style={{ marginBottom: 8 }}>Reconnecting to your session…</p>
           <p style={{ fontSize: 13, color: "#888" }}>The server is waking up. This takes about 30 seconds.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Intro animation screen ──
+  if (introScreen) {
+    return (
+      <div className="intro-screen">
+        <div className="intro-inner">
+          <img src="/coach.png" alt="Aadya" className="intro-photo" />
+          {introScreen === "new" ? (
+            <div className="intro-text">
+              <h2>Welcome, I'm Aadya.</h2>
+              <p>
+                I'm here to help you with any health issues you may have — they can be
+                physical, mental, or any other lifestyle issues you may be going through.
+              </p>
+              <p>
+                Please give me your general details and a brief description of your
+                concerns, and I'll design a personalised, tailor-made solution for you.
+              </p>
+              <button className="intro-btn" onClick={() => setIntroScreen(null)}>
+                Go ahead →
+              </button>
+            </div>
+          ) : (
+            <div className="intro-text">
+              <h2>Welcome back{introName ? `, ${introName}` : ""}.</h2>
+              <p>Ready for today's check-in?</p>
+            </div>
+          )}
         </div>
       </div>
     );
