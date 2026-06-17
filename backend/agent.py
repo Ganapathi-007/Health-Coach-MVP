@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from models import PatientProfile
@@ -698,7 +699,11 @@ Rules:
 {guardrails}""",
         messages=[{"role": "user", "content": f"Generate Day {day} check-in questions."}]
     )
-    return json.loads(response.content[0].text)
+    text = response.content[0].text.strip()
+    match = re.search(r'\[.*?\]', text, re.DOTALL)
+    if match:
+        return json.loads(match.group())
+    return json.loads(text)
 
 
 def generate_coaching_response(day: int, questions: list, responses: list, profile: PatientProfile) -> str:
