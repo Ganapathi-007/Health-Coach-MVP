@@ -863,7 +863,14 @@ function HealthCoach() {
             <div className="card">
               <input
                 type="text"
-                placeholder="e.g. Can I have coffee? What should I eat for breakfast?"
+                placeholder={{
+                  anxiety: "e.g. How do I do box breathing? What is scheduled worry time?",
+                  weight_loss: "e.g. What is mindful eating? How do I handle emotional eating?",
+                  skin: "e.g. Which foods should I avoid? How does stress affect my skin?",
+                  energy: "e.g. What is stimulus control? How does caffeine affect sleep?",
+                  behavioral: "e.g. What is the RAIN technique? How do I handle urges?",
+                  general: "e.g. What is the sleep foundation habit? How do I build a wind-down routine?",
+                }[profile?.program_route] ?? "Ask anything about your program or this week's techniques…"}
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAsk()}
