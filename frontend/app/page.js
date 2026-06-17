@@ -68,6 +68,7 @@ function HealthCoach() {
   const [backendError, setBackendError] = useState(false);
   const [introScreen, setIntroScreen] = useState(null); // null | "new" | "returning"
   const [introName, setIntroName] = useState("");
+  const [introFading, setIntroFading] = useState(false);
   const signingUp = useRef(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -440,10 +441,15 @@ function HealthCoach() {
     );
   }
 
+  const dismissIntro = () => {
+    setIntroFading(true);
+    setTimeout(() => { setIntroScreen(null); setIntroFading(false); }, 500);
+  };
+
   // ── Intro animation screen ──
   if (introScreen) {
     return (
-      <div className="intro-screen">
+      <div className={`intro-screen${introFading ? " intro-screen-out" : ""}`}
         <div className="intro-inner">
           <img src="/coach.png" alt="Aadya" className="intro-photo" />
           {introScreen === "new" ? (
@@ -457,7 +463,7 @@ function HealthCoach() {
                 Please give me your general details and a brief description of your
                 concerns, and I'll design a personalised, tailor-made solution for you.
               </p>
-              <button className="intro-btn" onClick={() => setIntroScreen(null)}>
+              <button className="intro-btn" onClick={dismissIntro}>
                 Go ahead →
               </button>
             </div>
@@ -465,7 +471,7 @@ function HealthCoach() {
             <div className="intro-text">
               <h2>Welcome back{introName ? `, ${introName}` : ""}.</h2>
               <p>Ready for today's check-in?</p>
-              <button className="intro-btn" onClick={() => setIntroScreen(null)}>
+              <button className="intro-btn" onClick={dismissIntro}>
                 YES!
               </button>
             </div>
