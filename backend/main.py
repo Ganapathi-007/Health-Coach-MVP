@@ -61,10 +61,19 @@ def get_my_session(request: UserSessionRequest):
     if not session:
         raise HTTPException(status_code=404, detail="No session found")
     name_part = f", {session.profile.name}" if session.profile.name else ""
+
+    today_checkin = None
+    today = str(date.today())
+    if session.last_checkin_date == today and session.check_ins:
+        last = session.check_ins[-1]
+        if last.user_responses:
+            today_checkin = last
+
     return OnboardResponse(
         session_id=session.session_id,
         profile=session.profile,
-        welcome_message=f"Welcome back{name_part}."
+        welcome_message=f"Welcome back{name_part}.",
+        today_checkin=today_checkin,
     )
 
 

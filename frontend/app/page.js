@@ -160,6 +160,18 @@ function HealthCoach() {
                   setIntroName(data.profile?.name || "");
                   setIntroScreen("returning");
                 }
+                if (data.today_checkin) {
+                  const { questions_asked = [], user_responses = [], commitment, day } = data.today_checkin;
+                  const rebuilt = [];
+                  questions_asked.forEach((coach, i) => {
+                    const isFinal = i === questions_asked.length - 1;
+                    rebuilt.push({ role: "coach", text: coach, feedback: isFinal, commitment: isFinal ? commitment : null });
+                    if (i < user_responses.length) rebuilt.push({ role: "user", text: user_responses[i] });
+                  });
+                  setMessages(rebuilt);
+                  setCheckinDay(day);
+                  setCheckinPhase("done");
+                }
               } else if (res.status === 404) {
                 if (!introShownRef.current) {
                   introShownRef.current = true;

@@ -37,6 +37,7 @@ class OnboardResponse(BaseModel):
     session_id: str
     profile: PatientProfile
     welcome_message: str
+    today_checkin: Optional[CheckIn] = None
 
 class CheckInRequest(BaseModel):
     session_id: str
