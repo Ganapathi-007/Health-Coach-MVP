@@ -798,7 +798,7 @@ function HealthCoach() {
                     {messages.map((msg, i) => (
                       <div key={i} className={`chat-bubble-row ${msg.role}`}>
                         {msg.role === "coach" && (
-                          <div className="chat-avatar">🌿</div>
+                          <div className="chat-avatar"><img src="/coach.png" alt="Coach" /></div>
                         )}
                         <div className={`chat-bubble ${msg.role} ${msg.feedback ? "feedback" : ""}`}>
                           {msg.feedback
@@ -815,7 +815,7 @@ function HealthCoach() {
                     ))}
                     {loading && (
                       <div className="chat-bubble-row coach">
-                        <div className="chat-avatar">🌿</div>
+                        <div className="chat-avatar"><img src="/coach.png" alt="Coach" /></div>
                         <div className="chat-bubble coach" style={{ color: "#aaa", fontStyle: "italic" }}>
                           Thinking…
                         </div>
@@ -841,7 +841,12 @@ function HealthCoach() {
                   )}
 
                   {checkinPhase === "done" && (
-                    <p className="chat-done-note">Session complete. Check back tomorrow for Day {(checkinDay || 1) + 1}.</p>
+                    <div className="chat-done-actions">
+                      <p className="chat-done-note">Session complete. Check back tomorrow for Day {(checkinDay || 1) + 1}.</p>
+                      <button className="btn-talk-more" onClick={() => setCheckinPhase("chatting")}>
+                        I want to talk more
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
