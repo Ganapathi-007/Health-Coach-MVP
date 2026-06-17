@@ -14,40 +14,40 @@ const supabase = createClient(
 
 const TRACK_WEEKS = {
   anxiety: [
-    { title: "Awareness & Physiology", focus: "Stress response education, baseline mood tracking, diaphragmatic breathing as a daily anchor" },
-    { title: "Pattern Recognition", focus: "Worry journaling, scheduled worry time, thought awareness, values reflection" },
-    { title: "Skill Building", focus: "Thought records, ACT defusion techniques, gratitude journaling, deepening mindfulness" },
-    { title: "Committed Action", focus: "Behavioral activation, personal stress toolkit, relapse prevention plan" },
+    { title: "Awareness & Physiology", focus: "Stress response education, baseline mood tracking, diaphragmatic breathing as a daily anchor", why: "Most people try to think their way out of anxiety. But anxiety starts in the body, not the mind. This week we map your stress response so you know exactly what you're working with." },
+    { title: "Pattern Recognition", focus: "Worry journaling, scheduled worry time, thought awareness, values reflection", why: "Anxiety feeds on uncertainty. When you can see your worry patterns clearly, they lose their power. This week you become a scientist of your own mind." },
+    { title: "Skill Building", focus: "Thought records, ACT defusion techniques, gratitude journaling, deepening mindfulness", why: "Insight alone doesn't change anxiety — skills do. This week you build a personal toolkit of evidence-based techniques you'll use for life." },
+    { title: "Committed Action", focus: "Behavioral activation, personal stress toolkit, relapse prevention plan", why: "The goal was never zero anxiety. It was a life you don't have to shrink to feel safe. This week you practice living that life." },
   ],
   weight_loss: [
-    { title: "Baseline & Motivation", focus: "Self-awareness through food monitoring only — no restrictions yet — and intrinsic motivation" },
-    { title: "Habit Architecture", focus: "Environmental design, implementation intentions, the sleep-hunger connection" },
-    { title: "Stress, Emotions & Non-Scale Wins", focus: "Emotional eating patterns, mindful eating, expanding progress beyond the scale" },
-    { title: "Identity & Maintenance", focus: "Identity shift, high-risk situation planning, sustainable life beyond 30 days" },
+    { title: "Baseline & Motivation", focus: "Self-awareness through food monitoring only — no restrictions yet — and intrinsic motivation", why: "Restriction fails because it treats food as the enemy. This week there are no rules, no targets — just awareness. You need to understand your relationship with food before you can change it." },
+    { title: "Habit Architecture", focus: "Environmental design, implementation intentions, the sleep-hunger connection", why: "Willpower runs out. Environment doesn't. This week we redesign the conditions around you so healthy choices become the easy ones." },
+    { title: "Stress, Emotions & Non-Scale Wins", focus: "Emotional eating patterns, mindful eating, expanding progress beyond the scale", why: "Most programs ignore that we eat our emotions. Energy, sleep, and how your clothes fit matter more than a number. This week we address what the scale misses." },
+    { title: "Identity & Maintenance", focus: "Identity shift, high-risk situation planning, sustainable life beyond 30 days", why: "Short-term changes fail because they don't change who you think you are. This week we work on the identity shift that makes everything else stick." },
   ],
   skin: [
-    { title: "Reset & Eliminate", focus: "Remove inflammatory inputs, start a skin + food + mood diary, hydration baseline" },
-    { title: "Gut Rebuilding", focus: "Fermented foods, prebiotic vegetables, omega-3 sources, sleep for skin repair" },
-    { title: "Stress & Cortisol", focus: "HPA axis education, daily mindfulness, circadian sleep anchoring, gratitude journaling" },
-    { title: "Personalization & Reintroduction", focus: "Systematic food reintroduction, personal trigger map, long-term habit plan" },
+    { title: "Reset & Eliminate", focus: "Remove inflammatory inputs, start a skin + food + mood diary, hydration baseline", why: "Your skin is a window into internal inflammation. Before adding anything, we need to remove the inputs that may be silently driving it." },
+    { title: "Gut Rebuilding", focus: "Fermented foods, prebiotic vegetables, omega-3 sources, sleep for skin repair", why: "The gut-skin connection is real and well-documented. This week we rebuild the microbiome that regulates skin inflammation from the inside — no topical product can do this." },
+    { title: "Stress & Cortisol", focus: "HPA axis education, daily mindfulness, circadian sleep anchoring, gratitude journaling", why: "Stress hormones directly trigger skin flares. This week we address the internal driver that most skincare routines completely ignore." },
+    { title: "Personalization & Reintroduction", focus: "Systematic food reintroduction, personal trigger map, long-term habit plan", why: "Your skin is unique. Generic advice only goes so far. This week you identify your personal triggers so you have a roadmap built specifically for you." },
   ],
   energy: [
-    { title: "Remove & Measure", focus: "Fixed wake time, sleep diary, caffeine cutoff at 2pm, morning light exposure" },
-    { title: "Circadian Anchoring", focus: "Light management, 12-hour eating window, stimulus control, evening wind-down" },
-    { title: "Nutrition Timing & Movement", focus: "Protein-rich breakfast, morning walk, meal timing to prevent energy crashes" },
-    { title: "Integration & Optimization", focus: "Review energy gains, contingency plans for disruptions, 90-day maintenance" },
+    { title: "Remove & Measure", focus: "Fixed wake time, sleep diary, caffeine cutoff at 2pm, morning light exposure", why: "You can't improve what you can't measure. This week we establish a baseline and remove the habits that are silently destroying your sleep quality." },
+    { title: "Circadian Anchoring", focus: "Light management, 12-hour eating window, stimulus control, evening wind-down", why: "Your body has a biological clock, and most modern habits fight it. This week we align your light, eating, and sleep schedule to work with your biology instead of against it." },
+    { title: "Nutrition Timing & Movement", focus: "Protein-rich breakfast, morning walk, meal timing to prevent energy crashes", why: "When you eat and move matters as much as what you eat. This week we time both to stabilize energy across the entire day." },
+    { title: "Integration & Optimization", focus: "Review energy gains, contingency plans for disruptions, 90-day maintenance", why: "Sleep is a skill, not just something that happens to you. This week we consolidate everything and build a plan that holds up when life gets disrupted." },
   ],
   behavioral: [
-    { title: "Trigger Awareness", focus: "Habit loop logging, values clarification, psychoeducation on dopamine and habits" },
-    { title: "Habit Replacement", focus: "Replacement behaviors for each major trigger, urge surfing with the RAIN method" },
-    { title: "Stress Testing", focus: "HALT vulnerability check-in, high-risk situation pre-planning, DBT emotion regulation" },
-    { title: "Accountability & Forward Momentum", focus: "Relapse prevention plan, identity narrative, self-compassion for setbacks" },
+    { title: "Trigger Awareness", focus: "Habit loop logging, values clarification, psychoeducation on dopamine and habits", why: "You cannot fight what you cannot see. Before changing any habit, you need a detailed map of what triggers it, what rewards it, and when you're most vulnerable. This week is about building that map." },
+    { title: "Habit Replacement", focus: "Replacement behaviors for each major trigger, urge surfing with the RAIN method", why: "Willpower fights the urge head-on and loses every time. This week we build replacement paths so the habit has somewhere else to go when the trigger fires." },
+    { title: "Stress Testing", focus: "HALT vulnerability check-in, high-risk situation pre-planning, DBT emotion regulation", why: "Most relapses happen under stress, not on good days. This week we deliberately prepare for the hard moments before they arrive — because preparation beats willpower every time." },
+    { title: "Accountability & Forward Momentum", focus: "Relapse prevention plan, identity narrative, self-compassion for setbacks", why: "A slip is not a failure — unless you make it one. This week we build the identity and recovery plan that keeps a bad day from becoming a bad month." },
   ],
   general: [
-    { title: "Sleep Foundation", focus: "Consistent wake time, phone out of bedroom, tiny habits anchored to existing routines" },
-    { title: "Nervous System", focus: "Daily breath practice, evening wind-down, daily stress-shedding ritual" },
-    { title: "Nutrition Foundation", focus: "Add-don't-subtract approach, protein at breakfast, environmental design for healthy defaults" },
-    { title: "Movement & Connection", focus: "3x/week movement, accountability partner, identity-based habit framing" },
+    { title: "Sleep Foundation", focus: "Consistent wake time, phone out of bedroom, tiny habits anchored to existing routines", why: "Sleep is the lever that moves everything else. Poor sleep undermines diet, mood, energy, and willpower simultaneously. Every other change you make will work better once this is in place." },
+    { title: "Nervous System", focus: "Daily breath practice, evening wind-down, daily stress-shedding ritual", why: "Chronic stress is not a mindset problem — it's a physiological state. This week we introduce daily practices that physically regulate your nervous system, not just distract from it." },
+    { title: "Nutrition Foundation", focus: "Add-don't-subtract approach, protein at breakfast, environmental design for healthy defaults", why: "We're not restricting — we're adding. Small additions of protein and smarter environmental design quietly crowd out the habits you're trying to change, without willpower." },
+    { title: "Movement & Connection", focus: "3x/week movement, accountability partner, identity-based habit framing", why: "Movement is the single intervention with the most evidence across all health outcomes. This week we make it non-negotiable, sustainable, and something you actually want to do." },
   ],
 };
 
@@ -722,6 +722,7 @@ function HealthCoach() {
                               {i < currentWeekIdx && <span className="track-week-badge done">✓ Done</span>}
                             </div>
                             <div className="track-week-focus">{week.focus}</div>
+                            {week.why && <div className="track-week-why">{week.why}</div>}
                           </div>
                         ))}
                       </div>

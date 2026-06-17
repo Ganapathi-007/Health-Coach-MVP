@@ -987,6 +987,15 @@ input[type="number"]:focus {
   padding-left: 62px;
 }
 
+.track-week-why {
+  font-size: 13px;
+  color: #4a7c59;
+  line-height: 1.6;
+  padding-left: 62px;
+  margin-top: 6px;
+  font-style: italic;
+}
+
 /* ── Mobile sign out (hidden on desktop) ── */
 .mobile-signout {
   display: none;
