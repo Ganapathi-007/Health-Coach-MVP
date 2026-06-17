@@ -1,6 +1,6 @@
 import uuid
 from datetime import date, datetime
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 
 from models import (
@@ -120,8 +120,16 @@ def checkin_start(request: CheckInRequest):
     return CheckInStartResponse(day=day, opening=opening, missed_days=missed_days)
 
 
+def _update_summary_background(session_id: str, profile, existing_summary: str, check_ins: list):
+    new_summary = update_client_summary(profile, existing_summary, check_ins)
+    session = memory.get_session(session_id)
+    if session:
+        session.client_summary = new_summary
+        memory.update_session(session)
+
+
 @app.post("/checkin/turn", response_model=TurnResponse)
-def checkin_turn(request: TurnRequest):
+def checkin_turn(request: TurnRequest, background_tasks: BackgroundTasks):
     session = memory.get_session(request.session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -136,10 +144,11 @@ def checkin_turn(request: TurnRequest):
         session.check_ins[-1].questions_asked = coach_msgs
         session.check_ins[-1].user_responses = user_msgs
         session.check_ins[-1].commitment = result["commitment"]
-        session.client_summary = update_client_summary(
-            session.profile, session.client_summary or "", session.check_ins
-        )
         memory.update_session(session)
+        background_tasks.add_task(
+            _update_summary_background,
+            session.session_id, session.profile, session.client_summary or "", session.check_ins
+        )
 
     return TurnResponse(
         reply=result["message"],
