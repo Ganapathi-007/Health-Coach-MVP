@@ -69,6 +69,7 @@ function HealthCoach() {
   const [introScreen, setIntroScreen] = useState(null); // null | "new" | "returning"
   const [introName, setIntroName] = useState("");
   const [introFading, setIntroFading] = useState(false);
+  const introShownRef = useRef(false);
   const signingUp = useRef(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -154,12 +155,16 @@ function HealthCoach() {
                 setWelcome(data.welcome_message);
                 setTab("checkin");
                 setBackendError(false);
-                const name = data.profile?.name || "";
-                setIntroName(name);
-                setIntroScreen("returning");
+                if (!introShownRef.current) {
+                  introShownRef.current = true;
+                  setIntroName(data.profile?.name || "");
+                  setIntroScreen("returning");
+                }
               } else if (res.status === 404) {
-                // new user — show intro before onboarding
-                setIntroScreen("new");
+                if (!introShownRef.current) {
+                  introShownRef.current = true;
+                  setIntroScreen("new");
+                }
               }
             } catch {
               if (attempt < 4) {
