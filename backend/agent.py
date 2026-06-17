@@ -643,15 +643,6 @@ def generate_coach_turn(day: int, profile: PatientProfile, conversation_history:
 
     techniques_text = "\n".join(f"- {t.split(':')[0].strip()}" for t in week_data["techniques"])
 
-    user_turns = sum(1 for t in conversation_history if t["role"] == "user")
-
-    if user_turns >= 7:
-        wrap_up_instruction = "\nYou MUST wrap up this session now — it has gone on long enough. Give your closing insight and commitment, then end with [END_SESSION]."
-    elif user_turns >= 5:
-        wrap_up_instruction = "\nYou've covered good ground. If the main topics have been touched, it's a good time to close naturally."
-    else:
-        wrap_up_instruction = ""
-
     system = f"""You are a warm, direct wellness coach conducting a real daily check-in conversation.
 
 {guardrails}
@@ -670,10 +661,9 @@ HOW TO CONDUCT THIS CONVERSATION:
 5. Sound like a real coach — warm, curious, direct. No filler words ("great!", "absolutely!", "of course!")
 
 WHEN TO END:
-- When you've covered the main topics and the conversation feels naturally complete (usually after 4-6 user exchanges)
-- Close organically — don't announce "let's wrap up"
-- Final message structure: 2-3 sentences of specific coaching insight based on what they actually shared → specific commitment starting with "For tomorrow:" → then on the very last line write exactly: [END_SESSION]
-{wrap_up_instruction}"""
+- You decide — when the main topics have been touched and the conversation feels naturally complete
+- Close organically — don't announce "let's wrap up" or signal that you're ending
+- Final message structure: 2-3 sentences of specific coaching insight based on what they actually shared → specific commitment starting with "For tomorrow:" → then on the very last line write exactly: [END_SESSION]"""
 
     messages = []
     for turn in conversation_history:
