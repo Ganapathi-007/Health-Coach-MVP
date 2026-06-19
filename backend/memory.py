@@ -40,3 +40,6 @@ def update_session(session: Session) -> None:
     _supabase.table("sessions").update({
         "data": session.model_dump()
     }).eq("session_id", session.session_id).execute()
+
+def ping() -> None:
+    _supabase.table("sessions").select("session_id").limit(1).execute()

@@ -34,6 +34,10 @@ app.add_middleware(
 
 @app.get("/health")
 def health_check():
+    try:
+        memory.ping()
+    except Exception:
+        pass
     return {"status": "ok", "message": "Health Coach API is running"}
 
 

@@ -144,11 +144,15 @@ function HealthCoach() {
           // Try to restore existing health coach session (with retry for cold starts)
           const loadSession = async (attempt = 0) => {
             try {
+              const controller = new AbortController();
+              const timeout = setTimeout(() => controller.abort(), 12000);
               const res = await fetch(`${API}/auth/me`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ user_id: user.id }),
+                signal: controller.signal,
               });
+              clearTimeout(timeout);
               if (res.ok) {
                 const data = await res.json();
                 setSessionId(data.session_id);
@@ -449,37 +453,12 @@ function HealthCoach() {
     { key: "ask", icon: "?", label: "Ask your coach", mobileLabel: "Ask", requiresSession: true },
   ];
 
-  // ── Loading auth state ──
-  if (authLoading) {
-    return (
-      <div className="auth-loading">
-        <div className="auth-loading-inner">
-          <div className="logo-icon" style={{ margin: "0 auto 16px", width: 48, height: 48, fontSize: 24 }}>🌿</div>
-          <p>Loading…</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Backend cold start — show reconnecting instead of blank onboarding ──
-  if (backendError) {
-    return (
-      <div className="auth-loading">
-        <div className="auth-loading-inner">
-          <div className="logo-icon" style={{ margin: "0 auto 16px", width: 48, height: 48, fontSize: 24 }}>🌿</div>
-          <p style={{ marginBottom: 8 }}>Reconnecting to your session…</p>
-          <p style={{ fontSize: 13, color: "#888" }}>The server is waking up. This takes about 30 seconds.</p>
-        </div>
-      </div>
-    );
-  }
-
   const dismissIntro = () => {
     setIntroFading(true);
     setTimeout(() => { setIntroScreen(null); setIntroFading(false); }, 500);
   };
 
-  // ── Intro animation screen ──
+  // ── Intro animation screen — checked FIRST so it shows on fresh sign-in ──
   if (introScreen) {
     return (
       <div className={`intro-screen${introFading ? " intro-screen-out" : ""}`}>
@@ -509,6 +488,31 @@ function HealthCoach() {
               </button>
             </div>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Loading auth state ──
+  if (authLoading) {
+    return (
+      <div className="auth-loading">
+        <div className="auth-loading-inner">
+          <div className="logo-icon" style={{ margin: "0 auto 16px", width: 48, height: 48, fontSize: 24 }}>🌿</div>
+          <p>Loading…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Backend slow — show reconnecting instead of blank onboarding ──
+  if (backendError) {
+    return (
+      <div className="auth-loading">
+        <div className="auth-loading-inner">
+          <div className="logo-icon" style={{ margin: "0 auto 16px", width: 48, height: 48, fontSize: 24 }}>🌿</div>
+          <p style={{ marginBottom: 8 }}>Reconnecting to your session…</p>
+          <p style={{ fontSize: 13, color: "#888" }}>The server is waking up. This takes about 30 seconds.</p>
         </div>
       </div>
     );
